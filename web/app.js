@@ -262,12 +262,14 @@ function handle(e, animate) {
     const pending = d.status === "pending_approval";
     toast(`<strong>${esc(name(e.actor))}'s elf</strong> ${pending ? "wants to buy something at" : "just bought something at"} <strong>${esc(d.store_name)}</strong>${pending ? " (waiting for a parent)" : ""}`, pending ? "pending" : "");
     town.say(e.actor, pending ? "waiting for a parent" : "🎁 bought a gift!");
+    town.giveGift(e.actor);
     town.goHome(e.actor);
   }
   if (e.kind === "blocked") {
     blocked.push({ ...d, actor: e.actor });
     toast(`<strong>${esc(name(e.actor))}'s elf</strong> was stopped by a household rule${d.store_name ? ` at <strong>${esc(d.store_name)}</strong>` : ""}`, "blocked");
     town.say(e.actor, "stopped by a rule");
+    town.goHome(e.actor);
   }
   if (e.kind === "wish_saved") town.say(e.actor, "added to the list ✍");
   if (e.kind === "pot_unlocked") toast(`<strong>${esc(name(e.actor))}</strong> verified with Persona. The pot is unlocked.`);
