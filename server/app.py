@@ -197,6 +197,22 @@ def ledger_sql():
     return out
 
 
+@app.post("/api/feedback")
+def gift_feedback(body: dict = Body(...)):
+    """Recipient (or a parent) rates a gift; Cognee learns it for next time."""
+    p = ctx.ledger.purchase(str(body.get("purchase_id", "")))
+    if not p:
+        raise HTTPException(404, "unknown purchase")
+    rating = "liked it" if body.get("rating") == "up" else "did not like it"
+    note = str(body.get("note") or "").strip()[:300]
+    who = ctx.member(p["recipient_id"]) or {"id": p["recipient_id"], "name": p["recipient_name"]}
+    text = f"Gift feedback: {who['name']} {rating}: {p['item']} (SKU {p['sku']}, {p['store']}, ${p['price']:.0f}). {note}"
+    r = wishes.feedback(who["id"], who["name"], text)
+    ctx.ledger.event("feedback", str(body.get("actor") or who["id"]), {"purchase_id": p["id"], "recipient": who["name"],
+                     "item": p["item"], "rating": body.get("rating"), "note": note, **r}, vendor=r.get("backend", "local"), subject=who["id"])
+    return {"ok": True, "memory": r}
+
+
 @app.get("/api/playbooks")
 def list_playbooks():
     return {"playbooks": playbooks.menu()}
@@ -204,7 +220,7 @@ def list_playbooks():
 
 @app.post("/api/playbook/{pid}")
 def run_playbook(pid: str):
-    if pid not in playbooks.PLAYBOOKS:
+    if pid not in playbooks.PLAYBOOKS and pid != "feedback-espresso":
         raise HTTPException(404, "unknown playbook")
 
     def go():

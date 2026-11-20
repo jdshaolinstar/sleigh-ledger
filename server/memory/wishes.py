@@ -80,7 +80,8 @@ def recall(member_id: str, member_name: str, question: str | None = None) -> dic
     notes = _load().get(member_id, [])
     if backend() == "cognee":
         try:
-            q = question or f"What does {member_name} want for Christmas, what do they already own, and what don't they want?"
+            q = question or (f"What does {member_name} want for Christmas, what do they already own, what don't they want, "
+                             f"and what feedback did they give on past gifts (what to avoid or repeat)?")
             answer = _run(_cognee_recall(member_id, q))
             return {"backend": "cognee", "answer": answer, "notes": [n["text"] for n in notes]}
         except Exception as e:
@@ -109,7 +110,9 @@ async def _cognee_recall(member_id: str, question: str) -> str:
     ds = f"wishlist_{member_id}"
     if hasattr(cognee, "recall"):
         try:
-            res = await cognee.recall(query_text=question, datasets=[ds])
+            import uuid
+            # fresh session per recall, so Cognee's session memory doesn't treat repeat questions as repeats
+            res = await cognee.recall(query_text=question, datasets=[ds], session_id=f"recall-{uuid.uuid4().hex[:8]}")
         except TypeError:
             res = await cognee.recall(query_text=question)
     else:
@@ -118,3 +121,18 @@ async def _cognee_recall(member_id: str, question: str) -> str:
     for r in res or []:
         parts.append(getattr(r, "text", None) or (r.get("text") if isinstance(r, dict) else None) or str(r))
     return "\n".join(p for p in parts if p)[:1500]
+
+
+def feedback(member_id: str, member_name: str, text: str) -> dict:
+    """Gift feedback becomes part of the recipient's memory; Cognee's improve() loop then refines it."""
+    r = remember(member_id, member_name, text, source="gift feedback")
+    if backend() == "cognee":
+        def go():
+            try:
+                import cognee
+                _run(cognee.improve(f"wishlist_{member_id}"))
+            except Exception:
+                pass
+        threading.Thread(target=go, daemon=True).start()
+        r["improve"] = "started"
+    return r

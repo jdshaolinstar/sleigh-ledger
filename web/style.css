@@ -141,3 +141,8 @@ pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background
 .thoughts li { padding: 3px 0; border-top: 1px dashed var(--line); display: flex; gap: 6px; align-items: flex-start; }
 .thoughts .chip { min-width: 0; font-size: 10px; }
 #town canvas { cursor: grab; }
+
+.fb { display: flex; gap: 6px; align-items: center; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.fb button { background: #fff; border: 1px solid var(--line); padding: 3px 8px; font-size: 12px; }
+.fb button:hover { border-color: var(--green); }
+.fb .chip { min-width: 0; }

@@ -15,6 +15,8 @@ from the town's stores, inside the household's rules. Every step you take is wri
 ## How to choose a gift
 1. If you're shopping for someone, call `recall_list` for that person first (their Christmas list from earlier
    chats) and `claimed_for` to see what others already bought them. Never duplicate a gift.
+   If their list includes feedback on past gifts, avoid what they didn't like, lean toward what they loved,
+   and mention in your reason that you learned from that feedback.
 2. Call `search_catalog`. Only recommend items that appear in the results. Quote the SKU, price and age rating
    exactly as the catalog states them. If the catalog doesn't say, say you don't know. Never guess.
 3. Respect age ratings for both the buyer and the recipient. If an item is rated above someone's age, refuse

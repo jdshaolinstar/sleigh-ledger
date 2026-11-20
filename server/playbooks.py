@@ -39,7 +39,19 @@ PLAYBOOKS = {
 }
 
 
+def feedback_espresso(ctx) -> dict:
+    from server.memory import wishes
+    text = ("Gift feedback: Mom did not like it: Barista espresso machine (SKU CC-601, Cozy Corner, $399). "
+            "Too big for our kitchen and too complicated. She prefers small, cozy things and simple coffee gear.")
+    r = wishes.feedback("mom", "Mom", text)
+    ctx.ledger.event("feedback", "mom", {"recipient": "Mom", "item": "Barista espresso machine", "rating": "down",
+                     "note": "Too big for our kitchen and too complicated.", "forced": True, **r}, vendor=r.get("backend", "local"), subject="mom")
+    return {"playbook": "feedback-espresso", "memory": r}
+
+
 def run(ctx, pid: str) -> dict:
+    if pid == "feedback-espresso":
+        return feedback_espresso(ctx)
     title, expected, buyer, recipient, sku, query, claim, reason, recall_first = PLAYBOOKS[pid]
     elf = Elf(ctx, buyer, run_id=f"playbook:{pid}")
     ctx.ledger.event("playbook", buyer, {"playbook": pid, "title": title, "expected": expected, "forced": True})
@@ -52,4 +64,5 @@ def run(ctx, pid: str) -> dict:
 
 
 def menu() -> list[dict]:
-    return [{"id": k, "title": v[0], "expected": v[1]} for k, v in PLAYBOOKS.items()]
+    return [{"id": k, "title": v[0], "expected": v[1]} for k, v in PLAYBOOKS.items()] + [
+        {"id": "feedback-espresso", "title": "Feedback: Mom didn't love the espresso machine", "expected": "Cognee learns; next shopping day avoids it"}]

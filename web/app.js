@@ -196,6 +196,7 @@ const stoppedBy = (failed, label = "") => {
   return f.map((x) => CHECK_VENDOR[x] || ["policy", "Household rules"]);
 };
 const identity = [];   // Persona claims (parents see them in the Ledger)
+const feedbacks = [];  // gift feedback remembered by Cognee
 function decidedBy(p) {
   const ev = p.evidence || {};
   const out = [];
@@ -219,7 +220,11 @@ function renderLedger() {
     }
     const ev = p.evidence || {};
     const steps = [];
-    if (ev.memory) steps.push(`<li>${chip(ev.memory.backend)}<span>Recalled ${esc(p.recipient_name)}'s list: ${esc((ev.memory.answer || (ev.memory.notes || []).join("; ")).slice(0, 220))}</span></li>`);
+    if (ev.memory) {
+      const memText = (ev.memory.answer || "") + " " + (ev.memory.notes || []).join(" ");
+      const learned = /feedback/i.test(memText);
+      steps.push(`<li>${chip(ev.memory.backend)}<span>${learned ? "<strong>Learned from past gift feedback.</strong> " : ""}Recalled ${esc(p.recipient_name)}'s list: ${esc((ev.memory.answer || (ev.memory.notes || []).join("; ")).slice(0, 260))}</span></li>`);
+    }
     const sr = (ev.senso_results || [])[0] || [];
     if (sr.length) steps.push(`<li>${chip("senso")}<span>Searched the trusted catalog: ${sr.length} passages · top "${esc(sr[0].title)}" (content ${esc((sr[0].content_id || "").slice(0, 8))}…, score ${Number(sr[0].score || 0).toFixed(2)})</span></li>`);
     if (ev.fact_check) {
@@ -240,6 +245,7 @@ function renderLedger() {
       <div class="decided">Decided by: ${decidedBy(p).map(([v, t]) => `${chip(v)}<span class="dt">${esc(t)}</span>`).join("")}</div>
       <div class="meta" style="margin-top:4px">Why: ${esc(ev.reason)}</div>
       <ul class="steps">${steps.join("")}</ul>
+      ${p.status === "completed" ? `<div class="fb">Gift feedback ${chip("cognee")} <button data-fb="up" data-pid="${p.id}">👍 Loved it</button><button data-fb="down" data-pid="${p.id}">👎 Not great</button></div>` : ""}
       <details><summary>Raw evidence</summary><pre>${esc(JSON.stringify(ev, null, 2))}</pre></details></div>`;
   });
   const blockedCards = v?.role === "parent" ? blocked.slice().reverse().map((b) =>
@@ -247,12 +253,22 @@ function renderLedger() {
      <div class="meta">${esc(name(b.actor))}'s elf tried ${esc(b.item || b.sku)}${b.price ? ` (${money(b.price)})` : ""} for ${esc(b.recipient)} · ${esc(b.store_name || "")}</div></div><span class="status blocked">blocked</span></div>
      <div class="decided">Stopped by: ${stoppedBy(b.failed, b.label).map(([v, t]) => `${chip(v)}<span class="dt">${esc(t)}</span>`).join("")}</div>
      <div class="meta bad" style="margin-top:4px">${esc(b.reason)}</div></div>`) : [];
+  const fbCards = feedbacks.slice().reverse().map((f) =>
+    `<div class="card receipt"><div class="head"><div><div class="item">${f.rating === "up" ? "👍" : "👎"} Gift feedback: ${esc(f.recipient)} on ${esc(f.item)}</div>
+     <div class="meta">${esc(f.note || "")}</div></div><span class="status ${f.rating === "up" ? "completed" : "pending_approval"}">learned</span></div>
+     <div class="decided">Remembered by: ${chip(f.backend === "cognee" ? "cognee" : "local")}<span class="dt">${f.backend === "cognee" ? "stored + improve() loop; recalled on the next shopping trip" : "stored locally"}</span></div></div>`);
   const idCards = v?.role === "parent" ? identity.slice().reverse().map((c) =>
     `<div class="card receipt"><div class="head"><div><div class="item">🪪 ${esc(name(c.actor))} passed Persona ${esc((c.claim_type || "").replace(/_/g, " "))}</div>
      <div class="meta">Persona Relay · ${c.sandbox ? "sandbox" : "live"} · ${esc((c.methodology || []).map((m) => m.method).join(", "))}</div></div>
      <span class="status ${c.claim_result === "passed" ? "completed" : "blocked"}">${esc(c.claim_result || "error")}</span></div>
      <div class="decided">Decided by: ${chip("persona")}<span class="dt">${c.claim_result === "passed" ? "verified human, 21+ → pot unlocked" : "not verified"}</span></div></div>`) : [];
-  $("#ledger").innerHTML = idCards.concat(cards, blockedCards).join("") || `<div class="hint">No receipts yet. Press "Run the shopping day".</div>`;
+  $("#ledger").innerHTML = idCards.concat(fbCards, cards, blockedCards).join("") || `<div class="hint">No receipts yet. Press "Run the shopping day".</div>`;
+  document.querySelectorAll("[data-fb]").forEach((b) => b.addEventListener("click", async () => {
+    const note = prompt(b.dataset.fb === "up" ? "What did they love? (optional)" : "What was wrong with it? (e.g. too big, wrong size)") || "";
+    await api("/api/feedback", { method: "POST", body: JSON.stringify({ purchase_id: b.dataset.pid, rating: b.dataset.fb, note, actor: viewer }) });
+    toast(`${chip("cognee")} Feedback saved. Next time the elf remembers it.`);
+    refresh();
+  }));
 }
 
 // ---------- drills ----------
@@ -308,6 +324,7 @@ function handle(e, animate) {
   const d = e.data || {};
   trackThought(e);
   if (e.kind === "persona_claim") identity.push({ ...d, actor: e.actor });
+  if (e.kind === "feedback") { feedbacks.push({ ...d, actor: e.actor }); think(e.actor, `Feedback remembered: ${d.recipient} ${d.rating === "up" ? "loved" : "didn't love"} ${d.item}`, d.backend === "cognee" ? "cognee" : "local"); }
   if (e.kind === "walk") { town.reveal(d.store); if (animate) { town.walkTo(e.actor, d.store); town.say(e.actor, d.why === "buying" ? `heading into ${d.store_name}` : `browsing ${d.store_name}`); } }
   if (!animate) { if (e.kind === "blocked") blocked.push({ ...d, actor: e.actor }); if (e.kind === "purchase") town.giveGift(e.actor); return; }
   if (e.kind === "recall") town.say(e.actor, `reading ${d.person}'s list`);
