@@ -43,6 +43,26 @@ class SingleStoreLedger(Ledger):
         for s in SCHEMA:
             self._q(s)
 
+    # kv is only written through this process, so cache it (each round trip to the cloud is ~100 ms)
+    def get(self, k, default=None):
+        if not hasattr(self, "_kv"):
+            self._kv = {r["k"]: r["v"] for r in self._q("SELECT k, v FROM kv", (), "all")}
+        import json as _json
+        v = self._kv.get(k)
+        if v is None:
+            return default
+        return _json.loads(v) if isinstance(v, (str, bytes)) else v
+
+    def put(self, k, v):
+        super().put(k, v)
+        if hasattr(self, "_kv"):
+            import json as _json
+            self._kv[k] = _json.dumps(v)
+
+    def reset(self):
+        super().reset()
+        self._kv = {}
+
     def _q(self, sql: str, params: tuple = (), fetch: str | None = None):
         sql = sql.replace("?", "%s")
         with self.lock:

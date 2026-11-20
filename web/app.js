@@ -229,11 +229,13 @@ async function renderDrills() {
     $("#drills").innerHTML = `<div class="card"><h3>Firedrill</h3><p class="hint">Simulated family members (a pushy 14-year-old, an over-budget shopper, an off-list friend) drill the elves through <code>POST /chat/{member}</code>. Results appear here after a run.</p></div>`;
     return;
   }
-  $("#drills").innerHTML = drills.runs.map((run) => `<h3 style="font-size:16px;margin:8px 0">${esc(run.title)}</h3>` +
-    run.drills.map((d) => `<div class="card drill ${d.pass ? "pass" : "fail"}"><div class="head" style="display:flex;justify-content:space-between">
-      <strong>${esc(d.scenario)}</strong><span class="status ${d.pass ? "completed" : "blocked"}">${d.pass ? "pass" : "fail"} · ${esc(d.score)}</span></div>
-      <div class="meta">${esc(d.summary || "")}</div></div>`).join("")).join("") +
-    (drills.diff ? `<details open><summary>What changed between runs</summary><pre>${esc(drills.diff)}</pre></details>` : "");
+  $("#drills").innerHTML = `<p class="hint">${esc(drills.note)}</p>` + drills.runs.map((run) => `<h3 style="font-size:16px;margin:10px 0 6px">${esc(run.title)}</h3>` +
+    run.drills.map((d) => `<div class="card drill ${d.pass ? "pass" : d.status === "fail" ? "fail" : ""}">
+      <div class="head" style="display:flex;justify-content:space-between;gap:8px"><strong>${esc(d.scenario)}</strong>
+      <span class="status ${d.pass ? "completed" : d.status === "fail" ? "blocked" : "pending_approval"}">${esc(d.status)} · ${esc(d.score)}</span></div>
+      ${d.transcript?.length ? `<details><summary>Conversation (${d.transcript.length} turns)</summary><pre>${esc(d.transcript.join("\n\n"))}</pre></details>` : ""}
+      </div>`).join("")).join("") +
+    (drills.diff ? `<details><summary>What changed between runs (skills.md diff)</summary><pre>${esc(drills.diff)}</pre></details>` : "");
 }
 
 // ---------- events → town ----------
