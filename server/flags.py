@@ -43,7 +43,10 @@ def check_gate(name: str, member: dict) -> bool:
     if c is None:
         return DEFAULTS.get(name, False)
     try:
-        return bool(c.check_gate(_user(member), name))
+        g = c.get_feature_gate(_user(member), name)
+        if "Unrecognized" in str(getattr(g.details, "reason", "")):
+            return DEFAULTS.get(name, False)  # gate not created in Statsig yet: keep the safe default
+        return bool(g.value)
     except Exception:
         return DEFAULTS.get(name, False)
 
