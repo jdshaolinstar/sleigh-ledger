@@ -23,6 +23,14 @@ from server.policy import engine
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ctx = Context()
 app = FastAPI(title="Sleigh Ledger")
+
+
+@app.middleware("http")
+async def no_cache_static(request, call_next):
+    resp = await call_next(request)
+    if request.url.path == "/" or request.url.path.startswith("/web/"):
+        resp.headers["Cache-Control"] = "no-store"  # always serve the latest UI during the demo
+    return resp
 sessions: dict[str, list[dict]] = {}
 run_state = {"running": False, "run_id": ""}
 

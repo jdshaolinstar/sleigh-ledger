@@ -189,12 +189,19 @@ const CHECK_VENDOR = { persona_age_verified: ["persona", "Persona: buyer not 21+
   budget: ["policy", "Household rules: over budget"], buyer_age: ["policy", "Household rules: buyer too young"],
   recipient_age: ["policy", "Household rules: not suitable for the recipient's age"], recipient_allowed: ["policy", "Household rules: recipient not approved"],
   not_duplicate: ["policy", "Household rules: already bought (from the ledger)"], in_stock: ["policy", "Household rules: out of stock"] };
-const stoppedBy = (failed = []) => failed.map((f) => CHECK_VENDOR[f] || ["policy", f]);
+const LABEL_TO_CHECK = [["Persona", "persona_age_verified"], ["catalog", "fact_check"], ["Over-budget", "budget"], ["Duplicate", "not_duplicate"],
+  ["recipient", "recipient_allowed"], ["Out-of-stock", "in_stock"], ["pot locked", "pot_unlocked"], ["(", "buyer_age"]];
+const stoppedBy = (failed, label = "") => {
+  const f = failed?.length ? failed : [((LABEL_TO_CHECK.find(([k]) => label.includes(k)) || [])[1]) || "policy"];
+  return f.map((x) => CHECK_VENDOR[x] || ["policy", "Household rules"]);
+};
+const identity = [];   // Persona claims (parents see them in the Ledger)
 function decidedBy(p) {
   const ev = p.evidence || {};
   const out = [];
   if (ev.memory) out.push([ev.memory.backend === "cognee" ? "cognee" : "local", "list recalled"]);
   if (ev.fact_check) out.push(["senso", ev.fact_check.overall === "verified" ? "verified ✓" : ev.fact_check.overall]);
+  if ((ev.policy?.checks || []).some((c) => c.name === "pot_unlocked" && c.ok)) out.push(["persona", "parent verified ✓"]);
   if (ev.policy) out.push(["policy", ev.policy.checks.every((c) => c.ok) ? "all rules ✓" : "rule failed"]);
   if ((ev.policy?.checks || []).some((c) => c.name === "persona_age_verified" && c.ok)) out.push(["persona", "21+ verified ✓"]);
   if (ev.gate) out.push([ev.gate.source === "statsig" ? "statsig" : "local-default", p.status === "pending_approval" ? "waits for a parent" : ev.gate.teen_needs_parent_approval ? "approval rule on" : "approval rule off"]);
@@ -221,6 +228,10 @@ function renderLedger() {
       steps.push(`<li>${chip("senso")}<span>Fact-checked the elf's claim "${esc(ev.claim)}" → <strong class="${fc.overall === "conflict" ? "bad" : fc.overall === "verified" ? "ok" : ""}">${esc(fc.overall)}</strong>${verdicts ? ` (${esc(verdicts)})` : ""}</span></li>`);
     }
     if (ev.policy) steps.push(`<li>${chip("policy")}<span>${ev.policy.checks.map((c) => `<span class="${c.ok ? "ok" : "bad"}">${c.ok ? "✓" : "✗"}</span> ${esc(c.name.replace("_", " "))}`).join(" · ")}</span></li>`);
+    const potOk = (ev.policy?.checks || []).find((c) => c.name === "pot_unlocked")?.ok;
+    if (potOk) steps.push(`<li>${chip("persona")}<span>Pot unlocked: a parent passed Persona's Age 21+ check (sandbox)</span></li>`);
+    const ageCheck = (ev.policy?.checks || []).find((c) => c.name === "persona_age_verified");
+    if (ageCheck) steps.push(`<li>${chip("persona")}<span>${ageCheck.ok ? "✓" : "✗"} ${esc(ageCheck.detail)}</span></li>`);
     if (ev.gate) steps.push(`<li>${chip(ev.gate.source === "statsig" ? "statsig" : "local-default")}<span>Statsig gate ${esc(ev.gate.statsig_gate || "teen_needs_parent_approval")} (teen needs parent approval) = ${ev.gate.teen_needs_parent_approval}</span></li>`);
     steps.push(`<li>${chip(S.ledger_backend === "singlestore" ? "singlestore" : "ledger")}<span>${p.status === "completed" ? `Simulated checkout · receipt ${esc(p.receipt)}` : p.status === "pending_approval" ? "Held for parent approval" : esc(p.status)}</span></li>`);
     return `<div class="card receipt"><div class="head"><div><div class="item">${esc(p.item)} <span class="meta">(${esc(p.sku)})</span></div>
@@ -234,9 +245,14 @@ function renderLedger() {
   const blockedCards = v?.role === "parent" ? blocked.slice().reverse().map((b) =>
     `<div class="card receipt"><div class="head"><div><div class="item block-label">⛔ ${esc(b.label || "Attempt blocked")}</div>
      <div class="meta">${esc(name(b.actor))}'s elf tried ${esc(b.item || b.sku)}${b.price ? ` (${money(b.price)})` : ""} for ${esc(b.recipient)} · ${esc(b.store_name || "")}</div></div><span class="status blocked">blocked</span></div>
-     <div class="decided">Stopped by: ${stoppedBy(b.failed).map(([v, t]) => `${chip(v)}<span class="dt">${esc(t)}</span>`).join("")}</div>
+     <div class="decided">Stopped by: ${stoppedBy(b.failed, b.label).map(([v, t]) => `${chip(v)}<span class="dt">${esc(t)}</span>`).join("")}</div>
      <div class="meta bad" style="margin-top:4px">${esc(b.reason)}</div></div>`) : [];
-  $("#ledger").innerHTML = cards.concat(blockedCards).join("") || `<div class="hint">No receipts yet. Press "Run the shopping day".</div>`;
+  const idCards = v?.role === "parent" ? identity.slice().reverse().map((c) =>
+    `<div class="card receipt"><div class="head"><div><div class="item">🪪 ${esc(name(c.actor))} passed Persona ${esc((c.claim_type || "").replace(/_/g, " "))}</div>
+     <div class="meta">Persona Relay · ${c.sandbox ? "sandbox" : "live"} · ${esc((c.methodology || []).map((m) => m.method).join(", "))}</div></div>
+     <span class="status ${c.claim_result === "passed" ? "completed" : "blocked"}">${esc(c.claim_result || "error")}</span></div>
+     <div class="decided">Decided by: ${chip("persona")}<span class="dt">${c.claim_result === "passed" ? "verified human, 21+ → pot unlocked" : "not verified"}</span></div></div>`) : [];
+  $("#ledger").innerHTML = idCards.concat(cards, blockedCards).join("") || `<div class="hint">No receipts yet. Press "Run the shopping day".</div>`;
 }
 
 // ---------- drills ----------
@@ -284,13 +300,14 @@ function trackThought(e) {
   if (e.kind === "fact_check") think(a, `Fact-check on my claim: ${d.overall}`, "senso");
   if (e.kind === "policy") think(a, d.allowed ? (d.needs_approval ? "Rules OK; needs a parent's approval" : "All household rules pass") : "A household rule says no", "policy");
   if (e.kind === "purchase") think(a, `${d.status === "completed" ? "Bought" : "Requested"} a gift at ${d.store_name} for ${d.recipient}`, "ledger");
-  if (e.kind === "blocked") { const sb = stoppedBy(d.failed)[0] || ["policy", d.label]; think(a, `Stopped: ${sb[1]}`, sb[0]); }
+  if (e.kind === "blocked") { const sb = stoppedBy(d.failed, d.label)[0] || ["policy", d.label]; think(a, `Stopped: ${sb[1]}`, sb[0]); }
   if (e.kind === "wish_saved") think(a, `Added to the Christmas list: "${d.note}"`, d.backend === "cognee" ? "cognee" : "local");
 }
 
 function handle(e, animate) {
   const d = e.data || {};
   trackThought(e);
+  if (e.kind === "persona_claim") identity.push({ ...d, actor: e.actor });
   if (e.kind === "walk") { town.reveal(d.store); if (animate) { town.walkTo(e.actor, d.store); town.say(e.actor, d.why === "buying" ? `heading into ${d.store_name}` : `browsing ${d.store_name}`); } }
   if (!animate) { if (e.kind === "blocked") blocked.push({ ...d, actor: e.actor }); if (e.kind === "purchase") town.giveGift(e.actor); return; }
   if (e.kind === "recall") town.say(e.actor, `reading ${d.person}'s list`);
@@ -306,7 +323,7 @@ function handle(e, animate) {
   }
   if (e.kind === "blocked") {
     blocked.push({ ...d, actor: e.actor });
-    const sb = stoppedBy(d.failed)[0] || ["policy", "Household rules"];
+    const sb = stoppedBy(d.failed, d.label)[0] || ["policy", "Household rules"];
     toast(`<strong>${esc(name(e.actor))}'s elf</strong> was stopped${d.store_name ? ` at <strong>${esc(d.store_name)}</strong>` : ""} · ${chip(sb[0])} ${esc(sb[1].split(": ")[1] || sb[1])}`, "blocked");
     town.say(e.actor, "stopped by a rule");
     town.goHome(e.actor);
