@@ -39,7 +39,7 @@ async function refresh() {
     $("#chatAs").value = "lucy";
     firstLoad = false;
   }
-  renderBadge(); renderPot(); renderLists(); renderLedger(); renderDrills();
+  renderBadge(); renderPot(); renderLists(); renderLedger(); renderDrills(); renderSql();
   $("#runBtn").disabled = S.run.running;
   $("#runBtn").textContent = S.run.running ? "Elves are shopping…" : "Run the shopping day";
 }
@@ -136,6 +136,17 @@ async function verifyParent() {
   } catch (e) { toast(esc(e.message), "blocked"); }
 }
 
+async function renderSql() {
+  try {
+    const d = await api("/api/ledger-sql");
+    $("#sqlCard").innerHTML = `<div class="card"><div class="label">Live from the ledger · ${d.backend === "singlestore" ? "SingleStore" : "SQLite (local)"}</div>` +
+      d.queries.map((q) => `<h3 style="font-size:14px;margin:8px 0 4px">${esc(q.title)}</h3>
+        <table class="sqlt">${q.rows.length ? `<tr>${Object.keys(q.rows[0]).map((k) => `<th>${esc(k)}</th>`).join("")}</tr>` +
+          q.rows.map((r) => `<tr>${Object.values(r).map((v) => `<td>${esc(typeof v === "number" ? (Number.isInteger(v) ? v : v.toFixed(2)) : v)}</td>`).join("")}</tr>`).join("") : "<tr><td class='hint'>no rows yet</td></tr>"}</table>
+        <details><summary>SQL</summary><pre>${esc(q.sql)}</pre></details>`).join("") + `</div>`;
+  } catch (e) { /* ignore */ }
+}
+
 // ---------- lists ----------
 function renderLists() {
   const claimedFor = {};
@@ -193,7 +204,7 @@ function renderLedger() {
     }
     if (ev.policy) steps.push(`<li>${chip("policy")}<span>${ev.policy.checks.map((c) => `<span class="${c.ok ? "ok" : "bad"}">${c.ok ? "✓" : "✗"}</span> ${esc(c.name.replace("_", " "))}`).join(" · ")}</span></li>`);
     if (ev.gate) steps.push(`<li>${chip(ev.gate.source === "statsig" ? "statsig" : "local-default")}<span>Gate teen_needs_parent_approval = ${ev.gate.teen_needs_parent_approval}</span></li>`);
-    steps.push(`<li>${chip(S.ledger_backend || "ledger")}<span>${p.status === "completed" ? `Simulated checkout · receipt ${esc(p.receipt)}` : p.status === "pending_approval" ? "Held for parent approval" : esc(p.status)}</span></li>`);
+    steps.push(`<li>${chip(S.ledger_backend === "singlestore" ? "singlestore" : "ledger")}<span>${p.status === "completed" ? `Simulated checkout · receipt ${esc(p.receipt)}` : p.status === "pending_approval" ? "Held for parent approval" : esc(p.status)}</span></li>`);
     return `<div class="card receipt"><div class="head"><div><div class="item">${esc(p.item)} <span class="meta">(${esc(p.sku)})</span></div>
       <div class="meta">${esc(name(p.buyer))}'s elf → ${esc(p.recipient_name)} · ${esc(p.store)} · ${money(p.price)}</div></div>
       <span class="status ${p.status}">${p.status.replace("_", " ")}</span></div>

@@ -39,28 +39,40 @@ class Ledger:
                 self.db.execute(s)
             self.db.commit()
         self.listeners: list = []
+        self.backend = "sqlite"
+
+    def _q(self, sql: str, params: tuple = (), fetch: str | None = None):
+        """Run one statement. fetch: None | 'one' | 'all' | 'lastrowid'. Rows come back as dicts."""
+        with self.lock:
+            cur = self.db.execute(sql, params)
+            if fetch == "lastrowid":
+                self.db.commit()
+                return cur.lastrowid
+            if fetch == "one":
+                r = cur.fetchone()
+                return dict(r) if r else None
+            if fetch == "all":
+                return [dict(r) for r in cur.fetchall()]
+            self.db.commit()
+
+    UPSERT_KV = "INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)"
 
     # --- kv state -------------------------------------------------------------------------
     def get(self, k: str, default: Any = None) -> Any:
-        row = self.db.execute("SELECT v FROM kv WHERE k = ?", (k,)).fetchone()
+        row = self._q("SELECT v FROM kv WHERE k = ?", (k,), "one")
         return json.loads(row["v"]) if row else default
 
     def put(self, k: str, v: Any) -> None:
-        with self.lock:
-            self.db.execute("INSERT OR REPLACE INTO kv (k, v) VALUES (?, ?)", (k, json.dumps(v)))
-            self.db.commit()
+        self._q(self.UPSERT_KV, (k, json.dumps(v)))
 
     # --- events ---------------------------------------------------------------------------
     def event(self, kind: str, actor: str, data: dict, *, run_id: str = "", subject: str = "",
               vendor: str = "") -> dict:
         ev = {"ts": time.time(), "run_id": run_id, "actor": actor, "kind": kind, "subject": subject,
               "vendor": vendor, "data": data}
-        with self.lock:
-            cur = self.db.execute(
-                "INSERT INTO events (ts, run_id, actor, kind, subject, vendor, data) VALUES (?,?,?,?,?,?,?)",
-                (ev["ts"], run_id, actor, kind, subject, vendor, json.dumps(data, default=str)))
-            self.db.commit()
-            ev["id"] = cur.lastrowid
+        ev["id"] = self._q(
+            "INSERT INTO events (ts, run_id, actor, kind, subject, vendor, data) VALUES (?,?,?,?,?,?,?)",
+            (ev["ts"], run_id, actor, kind, subject, vendor, json.dumps(data, default=str)), "lastrowid")
         for fn in list(self.listeners):
             try:
                 fn(ev)
@@ -69,54 +81,63 @@ class Ledger:
         return ev
 
     def events(self, since_id: int = 0, limit: int = 500) -> list[dict]:
-        rows = self.db.execute("SELECT * FROM events WHERE id > ? ORDER BY id LIMIT ?", (since_id, limit)).fetchall()
-        return [dict(r) | {"data": json.loads(r["data"])} for r in rows]
+        rows = self._q("SELECT * FROM events WHERE id > ? ORDER BY id LIMIT ?", (since_id, limit), "all")
+        return [r | {"data": _j(r["data"])} for r in rows]
 
     # --- purchases ------------------------------------------------------------------------
     def add_purchase(self, *, run_id: str, buyer: str, recipient_id: str, recipient_name: str, sku: str,
                      item: str, store: str, price: float, status: str, evidence: dict) -> dict:
         pid = "SL-" + uuid.uuid4().hex[:8].upper()
         receipt = pid if status == "completed" else ""
-        with self.lock:
-            self.db.execute(
-                "INSERT INTO purchases (id, ts, run_id, buyer, recipient_id, recipient_name, sku, item, store, price,"
-                " status, receipt, evidence) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (pid, time.time(), run_id, buyer, recipient_id, recipient_name, sku, item, store, price, status,
-                 receipt, json.dumps(evidence, default=str)))
-            self.db.commit()
+        self._q(
+            "INSERT INTO purchases (id, ts, run_id, buyer, recipient_id, recipient_name, sku, item, store, price,"
+            " status, receipt, evidence) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (pid, time.time(), run_id, buyer, recipient_id, recipient_name, sku, item, store, price, status,
+             receipt, json.dumps(evidence, default=str)))
         return self.purchase(pid)
 
     def purchase(self, pid: str) -> dict:
-        r = self.db.execute("SELECT * FROM purchases WHERE id = ?", (pid,)).fetchone()
-        return dict(r) | {"evidence": json.loads(r["evidence"])} if r else {}
+        r = self._q("SELECT * FROM purchases WHERE id = ?", (pid,), "one")
+        return r | {"evidence": _j(r["evidence"])} if r else {}
 
     def set_status(self, pid: str, status: str) -> dict:
-        with self.lock:
-            self.db.execute("UPDATE purchases SET status = ?, receipt = CASE WHEN ? = 'completed' THEN id ELSE receipt END"
-                            " WHERE id = ?", (status, status, pid))
-            self.db.commit()
+        self._q("UPDATE purchases SET status = ?, receipt = CASE WHEN ? = 'completed' THEN id ELSE receipt END"
+                " WHERE id = ?", (status, status, pid))
         return self.purchase(pid)
 
     def purchases(self) -> list[dict]:
-        rows = self.db.execute("SELECT * FROM purchases ORDER BY ts").fetchall()
-        return [dict(r) | {"evidence": json.loads(r["evidence"])} for r in rows]
+        rows = self._q("SELECT * FROM purchases ORDER BY ts", (), "all")
+        return [r | {"evidence": _j(r["evidence"])} for r in rows]
 
     def spent(self) -> dict[str, float]:
         """Completed and pending purchases both hold budget (pending can't be double-spent)."""
         out: dict[str, float] = {}
-        for r in self.db.execute("SELECT buyer, SUM(price) s FROM purchases WHERE status IN ('completed','pending_approval') GROUP BY buyer"):
+        for r in self._q("SELECT buyer, SUM(price) s FROM purchases WHERE status IN ('completed','pending_approval') GROUP BY buyer", (), "all"):
             out[r["buyer"]] = float(r["s"] or 0)
         return out
 
     def claimed(self) -> set[tuple[str, str]]:
-        return {(r["recipient_id"], r["sku"]) for r in self.db.execute(
-            "SELECT recipient_id, sku FROM purchases WHERE status IN ('completed','pending_approval')")}
+        return {(r["recipient_id"], r["sku"]) for r in self._q(
+            "SELECT recipient_id, sku FROM purchases WHERE status IN ('completed','pending_approval')", (), "all")}
 
     def reset(self) -> None:
-        with self.lock:
-            for t in ("events", "purchases", "kv"):
-                self.db.execute(f"DELETE FROM {t}")
-            self.db.commit()
+        for t in ("events", "purchases", "kv"):
+            self._q(f"DELETE FROM {t}")
+
+
+def _j(v):
+    return v if isinstance(v, (dict, list)) else json.loads(v) if v else None
+
+
+def make_ledger():
+    """SingleStore when SINGLESTORE_URL is set (and LEDGER_PATH isn't forcing local), else SQLite."""
+    if os.environ.get("SINGLESTORE_URL") and not os.environ.get("LEDGER_PATH"):
+        try:
+            from server.ledger.singlestore import SingleStoreLedger
+            return SingleStoreLedger(os.environ["SINGLESTORE_URL"])
+        except Exception as e:  # never break the demo; say so
+            print("SingleStore unavailable, using SQLite:", str(e)[:200])
+    return Ledger()
 
 
 def view_purchase(p: dict, viewer: dict | None) -> dict:

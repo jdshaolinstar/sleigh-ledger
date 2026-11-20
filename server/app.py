@@ -98,7 +98,7 @@ def state(viewer: str = "mom"):
         "lists": {mid: [n["text"] for n in notes] for mid, notes in lists.items()},
         "purchases": purchases,
         "stores": [{"id": s["id"], "name": s["name"], "kind": s["kind"]} for s in ctx.catalog["stores"]],
-        "run": run_state, "llm_calls": ctx.llm_calls,
+        "run": run_state, "llm_calls": ctx.llm_calls, "ledger_backend": ctx.ledger.backend,
     }
 
 
@@ -164,6 +164,29 @@ def run_day():
 
     threading.Thread(target=all_elves, daemon=True).start()
     return run_state
+
+
+LEDGER_SQL = """SELECT buyer,
+       COUNT(*) AS receipts,
+       SUM(CASE WHEN status = 'completed' THEN price ELSE 0 END) AS spent,
+       SUM(CASE WHEN status = 'pending_approval' THEN price ELSE 0 END) AS held
+FROM purchases GROUP BY buyer ORDER BY spent DESC"""
+BLOCKED_SQL = """SELECT JSON_EXTRACT_STRING(data, 'label') AS rule, COUNT(*) AS attempts
+FROM events WHERE kind = 'blocked' GROUP BY rule ORDER BY attempts DESC"""
+
+
+@app.get("/api/ledger-sql")
+def ledger_sql():
+    """Live queries against the ledger, shown in the UI with the SQL itself."""
+    out = {"backend": ctx.ledger.backend, "queries": []}
+    for title, sql in (("Spend per family member", LEDGER_SQL), ("Blocked attempts by rule", BLOCKED_SQL)):
+        q = sql if ctx.ledger.backend == "singlestore" else sql.replace("JSON_EXTRACT_STRING(data, 'label')", "json_extract(data, '$.label')")
+        try:
+            rows = ctx.ledger._q(q, (), "all")
+        except Exception as e:
+            rows = [{"error": str(e)[:200]}]
+        out["queries"].append({"title": title, "sql": sql, "rows": rows})
+    return out
 
 
 @app.get("/api/playbooks")

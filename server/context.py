@@ -15,7 +15,7 @@ os.environ.setdefault("LLM_API_KEY", os.environ.get("OPENAI_API_KEY", ""))  # Co
 os.environ.setdefault("LLM_MODEL", "gpt-4o-mini")
 os.environ.setdefault("TELEMETRY_DISABLED", "true")
 
-from server.ledger.store import Ledger  # noqa: E402
+from server.ledger.store import make_ledger  # noqa: E402
 from server.policy import engine  # noqa: E402
 from server import flags  # noqa: E402
 
@@ -25,7 +25,7 @@ class Context:
         hf = household_file or os.environ.get("HOUSEHOLD", "family")
         self.base_household = json.loads((ROOT / f"data/households/{hf}.json").read_text())
         self.catalog = json.loads((ROOT / "data/catalog/catalog.json").read_text())
-        self.ledger = Ledger()
+        self.ledger = make_ledger()
         self.llm_calls = 0
         self.call_cap = int(os.environ.get("CALL_CAP", "400"))
         self.lock = threading.Lock()

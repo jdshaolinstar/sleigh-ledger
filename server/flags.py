@@ -48,7 +48,26 @@ def check_gate(name: str, member: dict) -> bool:
         return DEFAULTS.get(name, False)
 
 
+def amplitude(member: dict, name: str, props: dict) -> None:
+    """Mirror purchase/blocked events to Amplitude (HTTP API v2), off the request path."""
+    key = os.environ.get("AMPLITUDE_API_KEY", "")
+    if not key or os.environ.get("SENSO_SYNTHETIC") == "1":  # skip Firedrill/test traffic
+        return
+    import httpx
+
+    def send():
+        try:
+            httpx.post("https://api2.amplitude.com/2/httpapi", timeout=10, json={"api_key": key, "events": [{
+                "user_id": f"holly-{member['id']}", "event_type": name,
+                "user_properties": {"age": member.get("age"), "role": member.get("role")},
+                "event_properties": {k: (v if isinstance(v, (int, float, bool)) else str(v)) for k, v in props.items()}}]})
+        except Exception:
+            pass
+    threading.Thread(target=send, daemon=True).start()
+
+
 def log_event(member: dict, name: str, value=None, metadata: dict | None = None) -> None:
+    amplitude(member, name, {"value": value, **(metadata or {})})
     c = _client()
     if c is None:
         return
