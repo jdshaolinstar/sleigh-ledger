@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
+os.environ.setdefault("LLM_API_KEY", os.environ.get("OPENAI_API_KEY", ""))  # Cognee reads LLM_API_KEY
+os.environ.setdefault("LLM_MODEL", "gpt-4o-mini")
+os.environ.setdefault("TELEMETRY_DISABLED", "true")
 
 from server.ledger.store import Ledger  # noqa: E402
 from server.policy import engine  # noqa: E402

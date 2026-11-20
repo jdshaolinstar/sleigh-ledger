@@ -6,6 +6,7 @@ Usage: .venv/Scripts/python -m scripts.seed [--unlocked]
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import sys
 
@@ -34,9 +35,14 @@ def main() -> None:
         notes.unlink()
     for mid, lines in EARLIER_CHATS.items():
         m = ctx.member(mid)
-        for line in lines:
-            r = wishes.remember(mid, m["name"], line, source="seeded earlier chat")
-        print(mid, r)
+        os.environ["MEMORY_BACKEND_SAVED"] = wishes.backend()
+        for line in lines:  # local notes first (instant)
+            with wishes._lock:
+                d = wishes._load(); d.setdefault(mid, []).append({"text": line, "source": "seeded earlier chat"}); wishes._save(d)
+        if "--cognee" in sys.argv:
+            print(mid, wishes.seed_cognee(mid, m["name"], lines), flush=True)
+    if "--keep-ledger" not in sys.argv:
+        pass
     if "--unlocked" in sys.argv:
         ctx.ledger.put("pot_unlocked", True)
     print(json.dumps({k: len(v) for k, v in wishes.all_lists().items()}))

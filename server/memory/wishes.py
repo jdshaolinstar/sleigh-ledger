@@ -37,19 +37,37 @@ def _run(coro):
         loop.close()
 
 
-def remember(member_id: str, member_name: str, text: str, source: str = "chat") -> dict:
+def remember(member_id: str, member_name: str, text: str, source: str = "chat", wait: bool = False) -> dict:
+    """Saves locally at once; Cognee indexing (~40 s) runs in a background thread unless wait=True."""
     with _lock:
         d = _load()
         d.setdefault(member_id, []).append({"text": text, "source": source})
         _save(d)
     if backend() == "cognee":
-        try:
-            import cognee  # noqa: F401
-            _run(_cognee_remember(member_id, f"{member_name} said ({source}): {text}"))
-            return {"backend": "cognee", "stored": True}
-        except Exception as e:  # keep the local copy; report honestly
-            return {"backend": "local", "stored": True, "cognee_error": str(e)[:200]}
+        line = f"{member_name} said ({source}): {text}"
+        if wait:
+            try:
+                _run(_cognee_remember(member_id, line))
+                return {"backend": "cognee", "stored": True}
+            except Exception as e:
+                return {"backend": "local", "stored": True, "cognee_error": str(e)[:200]}
+        threading.Thread(target=lambda: _safe(_cognee_remember(member_id, line)), daemon=True).start()
+        return {"backend": "cognee", "stored": True, "indexing": "background"}
     return {"backend": "local", "stored": True}
+
+
+def _safe(coro):
+    try:
+        _run(coro)
+    except Exception:
+        pass
+
+
+def seed_cognee(member_id: str, member_name: str, lines: list[str]) -> dict:
+    """One combined memory per member (faster than one call per line)."""
+    text = f"{member_name}'s Christmas list, from earlier chats with their elf (seeded for the demo): " + " ".join(lines)
+    _run(_cognee_remember(member_id, text))
+    return {"backend": "cognee", "member": member_id}
 
 
 def recall(member_id: str, member_name: str, question: str | None = None) -> dict:

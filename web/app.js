@@ -57,9 +57,9 @@ function renderPot() {
   const lock = $("#lock");
   lock.className = "card lock" + (S.pot_unlocked ? " ok" : "");
   lock.innerHTML = S.pot_unlocked
-    ? `<div><strong>Pot unlocked</strong><div class="hint" style="margin:0">A parent verified with Persona. Elves can check out.</div></div><span>✅</span>`
+    ? `<div><strong>Pot unlocked</strong><div class="hint" style="margin:0">${S.unlock_via === "persona" ? "A parent verified with Persona (sandbox). Elves can check out." : "Unlocked for the demo without Persona verification."}</div></div><span>✅</span>`
     : `<div><strong>Pot locked</strong><div class="hint" style="margin:0">A parent must verify their identity before any elf can buy.</div></div>
-       <button class="primary" id="verifyBtn">Verify parent</button>`;
+       <button class="primary" id="verifyBtn">${pendingInquiry ? "Check verification" : "Verify parent"}</button>`;
   $("#verifyBtn")?.addEventListener("click", verifyParent);
 
   const alloc = S.members.reduce((a, m) => a + m.allocation, 0);
@@ -96,29 +96,29 @@ function renderPot() {
   }));
 }
 
+let pendingInquiry = null;
 async function verifyParent() {
   if (S.viewer?.role !== "parent") return toast("Switch 'View as' to Mom or Dad to verify.", "pending");
   try {
     const cfg = await api("/api/persona/config");
-    if (cfg.enabled && window.Persona) {
-      const client = new window.Persona.Client({
-        templateId: cfg.template_id, environmentId: cfg.environment_id, referenceId: viewer,
-        onReady: () => client.open(),
-        onComplete: async ({ inquiryId, status }) => {
-          await api("/api/persona/complete", { method: "POST", body: JSON.stringify({ actor: viewer, inquiry_id: inquiryId, status }) });
-          refresh();
-        },
-      });
-      return;
+    if (!cfg.enabled) {
+      if (confirm("Persona isn't configured on this server. Unlock without verification (labeled as such in the ledger)?"))
+        await api("/api/unlock", { method: "POST", body: JSON.stringify({ actor: viewer, via: "demo-no-persona" }) });
+      return refresh();
     }
-    if (cfg.enabled) {
+    if (!pendingInquiry) {
       const r = await api("/api/persona/inquiry", { method: "POST", body: JSON.stringify({ actor: viewer }) });
-      toast(`Persona inquiry ${r.inquiry_id} ${r.status}`, "pending");
-      refresh();
+      pendingInquiry = r.inquiry_id;
+      window.open(r.url, "_blank", "width=480,height=760");
+      toast(`Persona inquiry <strong>${esc(r.inquiry_id)}</strong> opened. Finish it, then press "Check verification".`, "pending");
+      $("#verifyBtn").textContent = "Check verification";
       return;
     }
-    toast("Persona isn't configured on this server yet.", "blocked");
-  } catch (e) { toast(e.message, "blocked"); }
+    const done = await api("/api/persona/complete", { method: "POST", body: JSON.stringify({ actor: viewer, inquiry_id: pendingInquiry }) });
+    if (done.pot_unlocked) { pendingInquiry = null; toast("Persona verified. Pot unlocked."); }
+    else toast(`Persona status: ${esc(done.status)}. Finish the flow, then check again.`, "pending");
+    refresh();
+  } catch (e) { toast(esc(e.message), "blocked"); }
 }
 
 // ---------- lists ----------

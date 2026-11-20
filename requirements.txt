@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+httpx
+openai
+python-dotenv
+statsig-python-core
+pymysql
+cognee
+pytest

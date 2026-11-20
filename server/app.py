@@ -13,7 +13,7 @@ from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from server import flags, playbooks
+from server import flags, persona, playbooks
 from server.agent.elf import Elf
 from server.context import Context
 from server.ledger.store import view_purchase
@@ -93,7 +93,7 @@ def state(viewer: str = "mom"):
     return {
         "household": {"name": h["name"], "pot": h["pot"], "kind": h["kind"]},
         "members": members, "viewer": v,
-        "pot_unlocked": ctx.pot_unlocked, "policy_mode": ctx.policy_mode, "skills_version": ctx.skills_version,
+        "pot_unlocked": ctx.pot_unlocked, "unlock_via": ctx.ledger.get("unlock_via", "seed"), "policy_mode": ctx.policy_mode, "skills_version": ctx.skills_version,
         "flags_source": flags.source(), "memory_backend": wishes.backend(),
         "lists": {mid: [n["text"] for n in notes] for mid, notes in lists.items()},
         "purchases": purchases,
@@ -208,9 +208,42 @@ def unlock(body: dict = Body(...)):
     verified[actor["id"]] = True
     ctx.ledger.put("verified", verified)
     ctx.ledger.put("pot_unlocked", True)
-    ctx.ledger.event("pot_unlocked", actor["id"], {"inquiry_id": inquiry, "status": status,
-                                                   "via": body.get("via", "persona")}, vendor="persona")
+    via = body.get("via") or "demo-no-persona"
+    ctx.ledger.event("pot_unlocked", actor["id"], {"inquiry_id": inquiry, "status": status, "via": via},
+                     vendor="persona" if via == "persona" else "ledger")
+    ctx.ledger.put("unlock_via", via)
     return {"pot_unlocked": True}
+
+
+@app.get("/api/persona/config")
+def persona_config():
+    return persona.config()
+
+
+@app.post("/api/persona/inquiry")
+def persona_inquiry(body: dict = Body(...)):
+    actor = ctx.member(str(body.get("actor", "")))
+    if not actor or actor["role"] != "parent":
+        raise HTTPException(403, "Only a parent verifies.")
+    if not persona.enabled():
+        raise HTTPException(400, "Persona isn't configured (PERSONA_API_KEY + PERSONA_TEMPLATE_ID).")
+    inq = persona.create_inquiry(actor["id"])
+    token = persona.session_token(inq["inquiry_id"])
+    url = f"https://inquiry.withpersona.com/verify?inquiry-id={inq['inquiry_id']}" + (f"&session-token={token}" if token else "")
+    ctx.ledger.event("persona_inquiry", actor["id"], {"inquiry_id": inq["inquiry_id"], "status": inq["status"]}, vendor="persona")
+    return inq | {"url": url}
+
+
+@app.post("/api/persona/complete")
+def persona_complete(body: dict = Body(...)):
+    actor = ctx.member(str(body.get("actor", "")))
+    if not actor or actor["role"] != "parent":
+        raise HTTPException(403, "Only a parent verifies.")
+    st = persona.status(str(body.get("inquiry_id")))
+    ctx.ledger.event("persona_status", actor["id"], st, vendor="persona")
+    if st["status"] in ("completed", "approved"):
+        return unlock({"actor": actor["id"], "inquiry_id": st["inquiry_id"], "status": st["status"], "via": "persona"})
+    return {"pot_unlocked": False, "status": st["status"]}
 
 
 @app.post("/api/reset")
