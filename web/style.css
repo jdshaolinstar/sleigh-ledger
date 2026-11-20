@@ -128,3 +128,16 @@ pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; background
 .sqlt { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
 .sqlt th, .sqlt td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); }
 .sqlt th { color: var(--muted); font-weight: 600; }
+
+.decided { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.decided .chip { min-width: 0; }
+.decided .dt { margin-right: 6px; color: var(--ink); }
+.toast .chip { min-width: 0; font-size: 10px; padding: 1px 5px; }
+.elf-pop { position: absolute; z-index: 8; width: 320px; background: var(--paper); border-radius: 12px; padding: 12px 14px;
+  box-shadow: 0 12px 36px rgba(0,0,0,.35); font-size: 13px; }
+.elf-pop h3 { font-size: 16px; margin-bottom: 6px; }
+.elf-pop .x { position: absolute; right: 8px; top: 6px; background: transparent; font-size: 18px; color: var(--muted); padding: 2px 6px; }
+.thoughts { list-style: none; padding: 0; margin: 4px 0 0; }
+.thoughts li { padding: 3px 0; border-top: 1px dashed var(--line); display: flex; gap: 6px; align-items: flex-start; }
+.thoughts .chip { min-width: 0; font-size: 10px; }
+#town canvas { cursor: grab; }

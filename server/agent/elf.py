@@ -175,6 +175,7 @@ class Elf:
             flags.log_event(b, "gift_blocked", sku, {"reason": decision.reason})
             self.emit("blocked", {"sku": sku, "recipient": rec["name"], "reason": decision.reason,
                                   "label": block_label(decision, product), "item": product and product["name"],
+                                  "failed": [c.name for c in decision.failed],
                                   "price": product and product["price"],
                                   "store": store and store["id"], "store_name": store and store["name"]}, subject=rec["id"])
             return {"status": "blocked", "reason": decision.reason}

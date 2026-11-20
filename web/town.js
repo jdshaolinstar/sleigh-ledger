@@ -56,6 +56,22 @@ export class Town {
 
     this.shops = {};
     this.elves = {};
+    this.onElfClick = null;
+    const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+    let down = null;
+    this.renderer.domElement.addEventListener("pointerdown", (ev) => (down = [ev.clientX, ev.clientY]));
+    this.renderer.domElement.addEventListener("pointerup", (ev) => {
+      if (!down || Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 5) return;
+      const r = this.renderer.domElement.getBoundingClientRect();
+      ndc.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, this.camera);
+      const groups = Object.values(this.elves).map((e) => e.group);
+      const hit = ray.intersectObjects(groups, true)[0];
+      if (!hit) return;
+      let o = hit.object;
+      while (o && !o.userData.memberId) o = o.parent;
+      if (o && this.onElfClick) this.onElfClick(o.userData.memberId, ev.clientX, ev.clientY);
+    });
     this.twinkles = [];
     this.clock = new THREE.Clock();
     this.buildGround();
@@ -394,11 +410,18 @@ export class Town {
       pom.position.set(0, 3.05, -0.3);
       [body, head, hat].forEach((o) => (o.castShadow = true));
       g.add(body, belt, buckle, head, ...eyes, hat, brim, pom);
-      const gift = this.giftBox(0xd6453a, 0.45);
-      gift.position.set(0.55, 1.0, 0.25);
-      gift.visible = false;
+      const gift = new THREE.Group();
+      [0xd6453a, 0x3a78c9, 0xf0c419].forEach((col, k) => {
+        const b = this.giftBox(col, 0.42 - k * 0.06);
+        b.position.set(0, k * 0.4, 0);
+        b.rotation.y = k * 0.5;
+        b.visible = false;
+        gift.add(b);
+      });
+      gift.position.set(0.6, 1.0, 0.3);
       g.add(gift);
       g.scale.setScalar(scale * 1.15);
+      g.userData.memberId = m.id;
       const a = (i / members.length) * Math.PI * 2;
       const home = new THREE.Vector3(Math.cos(a) * 4.9, 0.16, Math.sin(a) * 4.9);
       g.position.copy(home);
@@ -441,7 +464,9 @@ export class Town {
 
   giveGift(memberId) {
     const e = this.elves[memberId];
-    if (e) e.gift.visible = true;
+    if (!e) return;
+    e.gifts = (e.gifts || 0) + 1;
+    e.gift.children.forEach((b, k) => (b.visible = k < e.gifts));
   }
 
   goHome(memberId) {
@@ -467,7 +492,7 @@ export class Town {
         if (dist < 0.15) {
           if (e.target.enter) { g.visible = false; e.target.enter.glow.intensity = 40; e.hiddenUntil = t + 1.4; }
           if (e.target.exit) g.visible = true;
-          if (e.target.done) { e.busy = false; e.wanderAt = t + 2 + Math.random() * 3; setTimeout(() => (e.gift.visible = false), 6000); }
+          if (e.target.done) { e.busy = false; e.wanderAt = t + 1 + Math.random() * 2; }
           e.target = null;
         } else {
           if (e.hiddenUntil && t < e.hiddenUntil) continue; // still inside the shop
@@ -485,7 +510,7 @@ export class Town {
         g.position.y = 0.16 + Math.abs(Math.sin(t * 2.5 + e.phase)) * 0.06;
         g.rotation.z = 0;
         if (!e.busy && t > e.wanderAt) {
-          const a = Math.random() * Math.PI * 2, r = 4.4 + Math.random() * 0.9;
+          const a = Math.random() * Math.PI * 2, r = (e.gifts ? 4.6 + Math.random() * 3.2 : 4.4 + Math.random() * 0.9);
           e.queue.push({ v: new THREE.Vector3(Math.cos(a) * r, 0.16, Math.sin(a) * r) });
           e.home = e.queue[e.queue.length - 1].v.clone();
           e.wanderAt = t + 3 + Math.random() * 4;

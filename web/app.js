@@ -183,6 +183,24 @@ $("#chatForm").addEventListener("submit", async (e) => {
 const VENDOR = { senso: "Senso", cognee: "Cognee", local: "Memory (local)", policy: "Household rules", statsig: "Statsig",
   "local-default": "Gate (default)", persona: "Persona", ledger: "Ledger", singlestore: "SingleStore" };
 const chip = (v) => `<span class="chip ${esc(v)}">${esc(VENDOR[v] || v)}</span>`;
+// Which sponsor/tool made each call (for "Stopped by" / "Decided by").
+const CHECK_VENDOR = { persona_age_verified: ["persona", "Persona: buyer not 21+ verified"], pot_unlocked: ["persona", "Persona: no verified parent yet"],
+  fact_check: ["senso", "Senso: claim conflicts with the catalog"], item_exists: ["senso", "Senso: item not in the catalog"],
+  budget: ["policy", "Household rules: over budget"], buyer_age: ["policy", "Household rules: buyer too young"],
+  recipient_age: ["policy", "Household rules: not suitable for the recipient's age"], recipient_allowed: ["policy", "Household rules: recipient not approved"],
+  not_duplicate: ["policy", "Household rules: already bought (from the ledger)"], in_stock: ["policy", "Household rules: out of stock"] };
+const stoppedBy = (failed = []) => failed.map((f) => CHECK_VENDOR[f] || ["policy", f]);
+function decidedBy(p) {
+  const ev = p.evidence || {};
+  const out = [];
+  if (ev.memory) out.push([ev.memory.backend === "cognee" ? "cognee" : "local", "list recalled"]);
+  if (ev.fact_check) out.push(["senso", ev.fact_check.overall === "verified" ? "verified ✓" : ev.fact_check.overall]);
+  if (ev.policy) out.push(["policy", ev.policy.checks.every((c) => c.ok) ? "all rules ✓" : "rule failed"]);
+  if ((ev.policy?.checks || []).some((c) => c.name === "persona_age_verified" && c.ok)) out.push(["persona", "21+ verified ✓"]);
+  if (ev.gate) out.push([ev.gate.source === "statsig" ? "statsig" : "local-default", p.status === "pending_approval" ? "waits for a parent" : ev.gate.teen_needs_parent_approval ? "approval rule on" : "approval rule off"]);
+  out.push([S.ledger_backend === "singlestore" ? "singlestore" : "ledger", "saved"]);
+  return out;
+}
 
 function renderLedger() {
   const v = S.viewer;
@@ -208,6 +226,7 @@ function renderLedger() {
     return `<div class="card receipt"><div class="head"><div><div class="item">${esc(p.item)} <span class="meta">(${esc(p.sku)})</span></div>
       <div class="meta">${esc(name(p.buyer))}'s elf → ${esc(p.recipient_name)} · ${esc(p.store)} · ${money(p.price)}</div></div>
       <span class="status ${p.status}">${p.status.replace("_", " ")}</span></div>
+      <div class="decided">Decided by: ${decidedBy(p).map(([v, t]) => `${chip(v)}<span class="dt">${esc(t)}</span>`).join("")}</div>
       <div class="meta" style="margin-top:4px">Why: ${esc(ev.reason)}</div>
       <ul class="steps">${steps.join("")}</ul>
       <details><summary>Raw evidence</summary><pre>${esc(JSON.stringify(ev, null, 2))}</pre></details></div>`;
@@ -215,6 +234,7 @@ function renderLedger() {
   const blockedCards = v?.role === "parent" ? blocked.slice().reverse().map((b) =>
     `<div class="card receipt"><div class="head"><div><div class="item block-label">⛔ ${esc(b.label || "Attempt blocked")}</div>
      <div class="meta">${esc(name(b.actor))}'s elf tried ${esc(b.item || b.sku)}${b.price ? ` (${money(b.price)})` : ""} for ${esc(b.recipient)} · ${esc(b.store_name || "")}</div></div><span class="status blocked">blocked</span></div>
+     <div class="decided">Stopped by: ${stoppedBy(b.failed).map(([v, t]) => `${chip(v)}<span class="dt">${esc(t)}</span>`).join("")}</div>
      <div class="meta bad" style="margin-top:4px">${esc(b.reason)}</div></div>`) : [];
   $("#ledger").innerHTML = cards.concat(blockedCards).join("") || `<div class="hint">No receipts yet. Press "Run the shopping day".</div>`;
 }
@@ -250,24 +270,44 @@ function toast(text, kind = "") {
   while ($("#toasts").children.length > 5) $("#toasts").lastChild.remove();
 }
 
+const thoughts = {};   // actor -> [{text, v}]
+const goals = {};      // actor -> "Shopping for Bill"
+function think(actor, text, v) { (thoughts[actor] ||= []).push({ text, v }); if (thoughts[actor].length > 8) thoughts[actor].shift(); }
+function trackThought(e) {
+  const d = e.data || {}, a = e.actor;
+  if (e.kind === "run_start") for (const [b, r] of d.assignments || []) goals[b] = `Shopping for ${name(r)}`;
+  if (e.kind === "playbook") goals[a] = d.title + " (forced)";
+  if (e.kind === "chat_in") goals[a] = `Chatting: "${(d.message || "").slice(0, 60)}"`;
+  if (e.kind === "recall") think(a, `Reading ${d.person}'s Christmas list`, d.backend === "cognee" ? "cognee" : "local");
+  if (e.kind === "claimed_check") think(a, `Checking what others already bought ${d.person} (${d.count})`, S?.ledger_backend === "singlestore" ? "singlestore" : "ledger");
+  if (e.kind === "search") think(a, `Searching the catalog: "${d.query}"`, "senso");
+  if (e.kind === "fact_check") think(a, `Fact-check on my claim: ${d.overall}`, "senso");
+  if (e.kind === "policy") think(a, d.allowed ? (d.needs_approval ? "Rules OK; needs a parent's approval" : "All household rules pass") : "A household rule says no", "policy");
+  if (e.kind === "purchase") think(a, `${d.status === "completed" ? "Bought" : "Requested"} a gift at ${d.store_name} for ${d.recipient}`, "ledger");
+  if (e.kind === "blocked") { const sb = stoppedBy(d.failed)[0] || ["policy", d.label]; think(a, `Stopped: ${sb[1]}`, sb[0]); }
+  if (e.kind === "wish_saved") think(a, `Added to the Christmas list: "${d.note}"`, d.backend === "cognee" ? "cognee" : "local");
+}
+
 function handle(e, animate) {
   const d = e.data || {};
+  trackThought(e);
   if (e.kind === "walk") { town.reveal(d.store); if (animate) { town.walkTo(e.actor, d.store); town.say(e.actor, d.why === "buying" ? `heading into ${d.store_name}` : `browsing ${d.store_name}`); } }
-  if (!animate) { if (e.kind === "blocked") blocked.push({ ...d, actor: e.actor }); return; }
+  if (!animate) { if (e.kind === "blocked") blocked.push({ ...d, actor: e.actor }); if (e.kind === "purchase") town.giveGift(e.actor); return; }
   if (e.kind === "recall") town.say(e.actor, `reading ${d.person}'s list`);
   if (e.kind === "fact_check") town.say(e.actor, `fact-check: ${d.overall}`);
   if (e.kind === "policy") town.say(e.actor, d.allowed ? "rules ✓" : "rules ✗");
   if (e.kind === "purchase") {
     town.reveal(d.store);
     const pending = d.status === "pending_approval";
-    toast(`<strong>${esc(name(e.actor))}'s elf</strong> ${pending ? "wants to buy something at" : "just bought something at"} <strong>${esc(d.store_name)}</strong>${pending ? " (waiting for a parent)" : ""}`, pending ? "pending" : "");
+    toast(`<strong>${esc(name(e.actor))}'s elf</strong> ${pending ? "wants to buy something at" : "just bought something at"} <strong>${esc(d.store_name)}</strong>${pending ? ` · ${chip("statsig")} waits for a parent` : ` · ${chip("senso")} verified · ${chip(S?.ledger_backend === "singlestore" ? "singlestore" : "ledger")} saved`}`, pending ? "pending" : "");
     town.say(e.actor, pending ? "waiting for a parent" : "🎁 bought a gift!");
     town.giveGift(e.actor);
     town.goHome(e.actor);
   }
   if (e.kind === "blocked") {
     blocked.push({ ...d, actor: e.actor });
-    toast(`<strong>${esc(name(e.actor))}'s elf</strong> was stopped by a household rule${d.store_name ? ` at <strong>${esc(d.store_name)}</strong>` : ""}`, "blocked");
+    const sb = stoppedBy(d.failed)[0] || ["policy", "Household rules"];
+    toast(`<strong>${esc(name(e.actor))}'s elf</strong> was stopped${d.store_name ? ` at <strong>${esc(d.store_name)}</strong>` : ""} · ${chip(sb[0])} ${esc(sb[1].split(": ")[1] || sb[1])}`, "blocked");
     town.say(e.actor, "stopped by a rule");
     town.goHome(e.actor);
   }
@@ -286,6 +326,24 @@ async function pollEvents() {
   } catch (err) { /* server restarting */ }
   setTimeout(pollEvents, 700);
 }
+
+// ---------- click an elf ----------
+town.onElfClick = (memberId, x, y) => {
+  const pop = $("#elfPop");
+  const gifts = S.purchases.filter((p) => p.buyer === memberId && ["completed", "pending_approval"].includes(p.status));
+  const ts = (thoughts[memberId] || []).slice(-5);
+  pop.innerHTML = `<button class="x" title="Close">×</button><h3>${esc(name(memberId))}'s elf</h3>
+    <div class="label">Goal</div><div>${esc(goals[memberId] || "Waiting in the plaza")}</div>
+    <div class="label" style="margin-top:8px">Thinking</div>
+    ${ts.length ? `<ul class="thoughts">${ts.map((t) => `<li>${chip(t.v)} ${esc(t.text)}</li>`).join("")}</ul>` : `<div class="hint" style="margin:0">Nothing yet.</div>`}
+    <div class="label" style="margin-top:8px">Gifts bought (${gifts.length})</div>
+    ${gifts.length ? `<ul class="thoughts">${gifts.map((p) => `<li>🎁 ${p.hidden ? "A secret gift" : esc(p.item)} → ${esc(p.recipient_name)}${p.status === "pending_approval" ? " (waiting for a parent)" : ""}</li>`).join("")}</ul>` : `<div class="hint" style="margin:0">None yet.</div>`}`;
+  const box = $("#town").getBoundingClientRect();
+  pop.style.left = Math.max(10, Math.min(x - box.left + 12, box.width - 330)) + "px";
+  pop.style.top = Math.max(10, Math.min(y - box.top - 20, box.height - 320)) + "px";
+  pop.classList.remove("hidden");
+  pop.querySelector(".x").onclick = () => pop.classList.add("hidden");
+};
 
 // ---------- demo menu ----------
 api("/api/playbooks").then(({ playbooks }) => {
