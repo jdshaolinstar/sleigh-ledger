@@ -15,7 +15,8 @@ _statsig = None
 _lock = threading.Lock()
 DEFAULTS = {"teen_needs_parent_approval": True}
 # The Statsig console gate can have any name; map our logical gate to it (env STATSIG_TEEN_GATE).
-GATE_NAMES = {"teen_needs_parent_approval": os.environ.get("STATSIG_TEEN_GATE", "h-shop-gate")}
+GATE_NAMES = {"teen_needs_parent_approval": [n for n in (os.environ.get("STATSIG_TEEN_GATE"), "teen_needs_parent_approval", "h-shop-gate") if n]}
+_resolved: dict[str, str] = {}
 
 
 def _client():
@@ -41,16 +42,23 @@ def source() -> str:
 
 
 def check_gate(name: str, member: dict) -> bool:
+    """Evaluate a logical gate in Statsig, trying each console name it may have; unknown -> safe default."""
     c = _client()
     if c is None:
         return DEFAULTS.get(name, False)
     try:
-        g = c.get_feature_gate(_user(member), GATE_NAMES.get(name, name))
-        if "Unrecognized" in str(getattr(g.details, "reason", "")):
-            return DEFAULTS.get(name, False)  # gate not created in Statsig yet: keep the safe default
-        return bool(g.value)
+        for gate_id in GATE_NAMES.get(name, [name]):
+            g = c.get_feature_gate(_user(member), gate_id)
+            if "Unrecognized" not in str(getattr(g.details, "reason", "")):
+                _resolved[name] = gate_id
+                return bool(g.value)
+        return DEFAULTS.get(name, False)
     except Exception:
         return DEFAULTS.get(name, False)
+
+
+def gate_id(name: str) -> str:
+    return _resolved.get(name, name)
 
 
 def amplitude(member: dict, name: str, props: dict) -> None:
