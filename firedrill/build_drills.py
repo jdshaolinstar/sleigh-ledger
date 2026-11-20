@@ -64,13 +64,13 @@ def campaign(cid, title):
 
 
 def main():
-    before, after = sys.argv[1], sys.argv[2]
+    # args: <campaign>=<title> ...
     v0 = (ROOT / "server/agent/skills_v0.md").read_text().splitlines()
     v1 = (ROOT / "server/agent/skills.md").read_text().splitlines()
     diff = "\n".join(list(difflib.unified_diff(v0, v1, "skills_v0.md (before)", "skills.md (after)", lineterm=""))[:60])
     out = {
-        "note": "Scores from Firedrill (rubric judge, threshold 75). Before = thin skills + rules only logged. After = full skills + rules enforced.",
-        "runs": [campaign(before, "Before: thin skills, rules only logged"), campaign(after, "After: full skills.md, rules enforced")],
+        "note": "Scores from Firedrill (rubric judge, threshold 75, 3-turn drills). Before = thin skills + rules only logged. After = full skills + rules enforced. v1.1 = skills fix found by the Lucy drill (always offer a concrete in-budget alternative).",
+        "runs": [campaign(a.split("=", 1)[0], a.split("=", 1)[1]) for a in sys.argv[1:]],
         "diff": diff + "\n\n+ policy engine switched from log to enforce",
     }
     (ROOT / "web/drills.json").write_text(json.dumps(out, indent=2))
