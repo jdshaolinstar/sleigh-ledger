@@ -321,6 +321,41 @@ def relay_check(body: dict = Body(...)):
     return out
 
 
+SNAP = ROOT / "data/runtime/snapshot.json"
+
+
+@app.post("/api/snapshot/save")
+def snapshot_save():
+    """Save the whole ledger (events, purchases, state) so a complete run can be restored for a demo."""
+    import json as _json
+    data = {"events": ctx.ledger._q("SELECT * FROM events ORDER BY id", (), "all"),
+            "purchases": ctx.ledger._q("SELECT * FROM purchases ORDER BY ts", (), "all"),
+            "kv": ctx.ledger._q("SELECT k, v FROM kv", (), "all")}
+    SNAP.parent.mkdir(parents=True, exist_ok=True)
+    SNAP.write_text(_json.dumps(data, default=str))
+    return {"saved": True, "events": len(data["events"]), "purchases": len(data["purchases"])}
+
+
+@app.post("/api/snapshot/restore")
+def snapshot_restore():
+    import json as _json
+    if not SNAP.exists():
+        raise HTTPException(404, "no snapshot saved")
+    data = _json.loads(SNAP.read_text())
+    ctx.ledger.reset()
+    ser = lambda v: v if isinstance(v, str) else _json.dumps(v)
+    for e in data["events"]:
+        ctx.ledger._q("INSERT INTO events (id, ts, run_id, actor, kind, subject, vendor, data) VALUES (?,?,?,?,?,?,?,?)",
+                      (e["id"], e["ts"], e["run_id"], e["actor"], e["kind"], e["subject"], e["vendor"], ser(e["data"])))
+    for p in data["purchases"]:
+        ctx.ledger._q("INSERT INTO purchases (id, ts, run_id, buyer, recipient_id, recipient_name, sku, item, store, price, status, receipt, evidence)"
+                      " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)", (p["id"], p["ts"], p["run_id"], p["buyer"], p["recipient_id"], p["recipient_name"],
+                      p["sku"], p["item"], p["store"], p["price"], p["status"], p["receipt"], ser(p["evidence"])))
+    for kv in data["kv"]:
+        ctx.ledger.put(kv["k"], _json.loads(kv["v"]) if isinstance(kv["v"], str) else kv["v"])
+    return {"restored": True, "events": len(data["events"]), "purchases": len(data["purchases"])}
+
+
 @app.post("/api/reset")
 def reset(body: dict = Body(default={})):
     ctx.ledger.reset()

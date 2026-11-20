@@ -395,6 +395,12 @@ document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("clic
   refresh();
 }));
 
+$("#snapSave").addEventListener("click", async () => { const r = await api("/api/snapshot/save", { method: "POST" }); toast(`Snapshot saved: ${r.purchases} receipts, ${r.events} events`); });
+$("#snapRestore").addEventListener("click", async () => {
+  if (!confirm("Replace the current ledger with the saved snapshot?")) return;
+  await api("/api/snapshot/restore", { method: "POST" }); location.reload();
+});
+
 // ---------- controls ----------
 $("#viewer").addEventListener("change", (e) => { viewer = e.target.value; refresh(); });
 $("#runBtn").addEventListener("click", async () => {
