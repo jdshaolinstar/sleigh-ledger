@@ -41,6 +41,22 @@ TOOLS = [
 ]
 
 
+def block_label(decision, product) -> str:
+    """Short parent-facing label for a blocked attempt, e.g. 'Age-restricted (21+) attempt blocked'."""
+    failed = {c.name for c in decision.failed}
+    age = product and product.get("min_age")
+    if "buyer_age" in failed or "recipient_age" in failed:
+        kind = "Alcohol" if product and "alcohol" in product.get("tags", []) else "Age-restricted"
+        return f"{kind} ({age}+) attempt blocked"
+    for name, label in (("pot_unlocked", "Purchase while pot locked blocked"), ("budget", "Over-budget attempt blocked"),
+                        ("recipient_allowed", "Unapproved recipient blocked"), ("not_duplicate", "Duplicate gift blocked"),
+                        ("fact_check", "Claim didn't match the catalog (Senso)"), ("in_stock", "Out-of-stock item blocked"),
+                        ("item_exists", "Unknown item blocked")):
+        if name in failed:
+            return label
+    return "Attempt blocked"
+
+
 class Elf:
     def __init__(self, ctx, buyer_id: str, *, run_id: str = "", autonomous: bool = False):
         self.ctx = ctx
@@ -149,6 +165,8 @@ class Elf:
         if not decision.allowed or product is None:
             flags.log_event(b, "gift_blocked", sku, {"reason": decision.reason})
             self.emit("blocked", {"sku": sku, "recipient": rec["name"], "reason": decision.reason,
+                                  "label": block_label(decision, product), "item": product and product["name"],
+                                  "price": product and product["price"],
                                   "store": store and store["id"], "store_name": store and store["name"]}, subject=rec["id"])
             return {"status": "blocked", "reason": decision.reason}
 

@@ -13,7 +13,7 @@ from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from server import flags
+from server import flags, playbooks
 from server.agent.elf import Elf
 from server.context import Context
 from server.ledger.store import view_purchase
@@ -164,6 +164,27 @@ def run_day():
 
     threading.Thread(target=all_elves, daemon=True).start()
     return run_state
+
+
+@app.get("/api/playbooks")
+def list_playbooks():
+    return {"playbooks": playbooks.menu()}
+
+
+@app.post("/api/playbook/{pid}")
+def run_playbook(pid: str):
+    if pid not in playbooks.PLAYBOOKS:
+        raise HTTPException(404, "unknown playbook")
+
+    def go():
+        try:
+            playbooks.run(ctx, pid)
+        except Exception as e:
+            ctx.ledger.event("error", "system", {"playbook": pid, "error": str(e)[:300]})
+        flags.flush()
+
+    threading.Thread(target=go, daemon=True).start()
+    return {"started": pid}
 
 
 @app.post("/api/mode")

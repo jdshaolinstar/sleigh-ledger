@@ -124,7 +124,7 @@ export class Town {
       tex.colorSpace = THREE.SRGBColorSpace;
       const sign = new THREE.Mesh(new THREE.PlaneGeometry(7.6, 2.4), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
       sign.rotation.x = -Math.PI / 2 + 0.35;
-      sign.position.set(0, 3.9, 0.4);
+      sign.position.set(0, 4.6, 0.2);
       g.add(sign);
       this.scene.add(g);
       const shop = { store: s, group: g, canvas, tex, glow, door: new THREE.Vector3(x, 0, z + facing * 4), revealed: false, visits: 0 };

@@ -187,8 +187,8 @@ function renderLedger() {
       <details><summary>Raw evidence</summary><pre>${esc(JSON.stringify(ev, null, 2))}</pre></details></div>`;
   });
   const blockedCards = v?.role === "parent" ? blocked.slice().reverse().map((b) =>
-    `<div class="card receipt"><div class="head"><div><div class="item">Stopped: ${esc(b.sku)} for ${esc(b.recipient)}</div>
-     <div class="meta">${esc(name(b.actor))}'s elf · ${esc(b.store_name || "")}</div></div><span class="status blocked">blocked</span></div>
+    `<div class="card receipt"><div class="head"><div><div class="item block-label">⛔ ${esc(b.label || "Attempt blocked")}</div>
+     <div class="meta">${esc(name(b.actor))}'s elf tried ${esc(b.item || b.sku)}${b.price ? ` (${money(b.price)})` : ""} for ${esc(b.recipient)} · ${esc(b.store_name || "")}</div></div><span class="status blocked">blocked</span></div>
      <div class="meta bad" style="margin-top:4px">${esc(b.reason)}</div></div>`) : [];
   $("#ledger").innerHTML = cards.concat(blockedCards).join("") || `<div class="hint">No receipts yet. Press "Run the shopping day".</div>`;
 }
@@ -256,6 +256,22 @@ async function pollEvents() {
   } catch (err) { /* server restarting */ }
   setTimeout(pollEvents, 700);
 }
+
+// ---------- demo menu ----------
+api("/api/playbooks").then(({ playbooks }) => {
+  $("#playbooks").innerHTML = playbooks.map((p) => `<button class="pb" data-pb="${p.id}"><span>${esc(p.title)}</span><small>${esc(p.expected)}</small></button>`).join("");
+  document.querySelectorAll("[data-pb]").forEach((b) => b.addEventListener("click", async () => {
+    await api(`/api/playbook/${b.dataset.pb}`, { method: "POST" });
+    toast(`Forced: ${esc(b.querySelector("span").textContent)}`, "pending");
+    document.querySelector(".demo-menu").open = false;
+  }));
+});
+document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", async () => {
+  const before = b.dataset.mode === "before";
+  await api("/api/mode", { method: "POST", body: JSON.stringify({ policy_mode: before ? "log" : "enforce", skills_version: before ? "v0" : "v1" }) });
+  toast(before ? "Before mode: thin skills, rules only logged" : "After mode: full skills, rules enforced", before ? "blocked" : "");
+  refresh();
+}));
 
 // ---------- controls ----------
 $("#viewer").addEventListener("change", (e) => { viewer = e.target.value; refresh(); });
