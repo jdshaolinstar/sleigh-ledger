@@ -93,7 +93,7 @@ def state(viewer: str = "mom"):
     return {
         "household": {"name": h["name"], "pot": h["pot"], "kind": h["kind"]},
         "members": members, "viewer": v,
-        "pot_unlocked": ctx.pot_unlocked, "unlock_via": ctx.ledger.get("unlock_via", "seed"), "policy_mode": ctx.policy_mode, "skills_version": ctx.skills_version,
+        "pot_unlocked": ctx.pot_unlocked, "unlock_via": ctx.ledger.get("unlock_via", "seed"), "age_verified": ctx.ledger.get("age_verified", {}), "policy_mode": ctx.policy_mode, "skills_version": ctx.skills_version,
         "flags_source": flags.source(), "memory_backend": wishes.backend(),
         "lists": {mid: [n["text"] for n in notes] for mid, notes in lists.items()},
         "purchases": purchases,
@@ -244,6 +244,34 @@ def persona_complete(body: dict = Body(...)):
     if st["status"] in ("completed", "approved"):
         return unlock({"actor": actor["id"], "inquiry_id": st["inquiry_id"], "status": st["status"], "via": "persona"})
     return {"pot_unlocked": False, "status": st["status"]}
+
+
+@app.post("/api/persona/relay/start")
+def relay_start(body: dict = Body(...)):
+    actor = ctx.member(str(body.get("actor", "")))
+    if not actor:
+        raise HTTPException(404, "unknown member")
+    r = persona.relay_start(actor["id"])
+    ctx.ledger.event("persona_relay_start", actor["id"], {"claim_type": r["claim_type"], "relay_id": r["id"]}, vendor="persona")
+    return r
+
+
+@app.post("/api/persona/relay/check")
+def relay_check(body: dict = Body(...)):
+    actor = ctx.member(str(body.get("actor", "")))
+    if not actor:
+        raise HTTPException(404, "unknown member")
+    claim = persona.relay_claim(str(body.get("relay_id")))
+    ctx.ledger.event("persona_claim", actor["id"], claim, vendor="persona")
+    if claim.get("claim_result") != "passed":
+        return {"pot_unlocked": ctx.pot_unlocked, "claim": claim}
+    av = ctx.ledger.get("age_verified", {})
+    av[actor["id"]] = claim["claim_type"]
+    ctx.ledger.put("age_verified", av)
+    out = {"claim": claim}
+    if actor["role"] == "parent":
+        out |= unlock({"actor": actor["id"], "inquiry_id": None, "status": f"relay {claim['claim_type']} passed", "via": "persona"})
+    return out
 
 
 @app.post("/api/reset")

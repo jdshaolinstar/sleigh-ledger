@@ -46,5 +46,29 @@ def status(inquiry_id: str) -> dict:
 
 
 def config() -> dict:
-    return {"enabled": enabled(), "template_id": os.environ.get("PERSONA_TEMPLATE_ID"),
+    return {"enabled": enabled(), "relay": relay_enabled(), "template_id": os.environ.get("PERSONA_TEMPLATE_ID"),
             "environment_id": os.environ.get("PERSONA_ENVIRONMENT_ID")}
+
+
+# --- Relay (yes/no claims such as age_over21_verified) via the Node sidecar in persona-relay/ ---
+RELAY = os.environ.get("PERSONA_RELAY_URL", "http://127.0.0.1:8790")
+
+
+def relay_enabled() -> bool:
+    try:
+        return httpx.get(f"{RELAY}/health", timeout=2).status_code == 200
+    except Exception:
+        return False
+
+
+def relay_start(reference: str, claim_type: str = "age_over21_verified") -> dict:
+    r = httpx.post(f"{RELAY}/start", json={"claimType": claim_type, "reference": reference}, timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+
+def relay_claim(relay_id: str) -> dict:
+    r = httpx.post(f"{RELAY}/claim", json={"id": relay_id}, timeout=30)
+    if r.status_code >= 400:
+        return {"error": r.json().get("error", r.text[:200])}
+    return r.json()

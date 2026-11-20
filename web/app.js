@@ -57,7 +57,7 @@ function renderPot() {
   const lock = $("#lock");
   lock.className = "card lock" + (S.pot_unlocked ? " ok" : "");
   lock.innerHTML = S.pot_unlocked
-    ? `<div><strong>Pot unlocked</strong><div class="hint" style="margin:0">${S.unlock_via === "persona" ? "A parent verified with Persona (sandbox). Elves can check out." : "Unlocked for the demo without Persona verification."}</div></div><span>✅</span>`
+    ? `<div><strong>Pot unlocked</strong><div class="hint" style="margin:0">${S.unlock_via === "persona" ? `A parent passed Persona's check (sandbox)${Object.keys(S.age_verified || {}).length ? ` · 21+ verified: ${Object.keys(S.age_verified).map(name).join(", ")}` : ""}. Elves can check out.` : "Unlocked for the demo without Persona verification."}</div></div><span>✅</span>`
     : `<div><strong>Pot locked</strong><div class="hint" style="margin:0">A parent must verify their identity before any elf can buy.</div></div>
        <button class="primary" id="verifyBtn">${pendingInquiry ? "Check verification" : "Verify parent"}</button>`;
   $("#verifyBtn")?.addEventListener("click", verifyParent);
@@ -101,6 +101,21 @@ async function verifyParent() {
   if (S.viewer?.role !== "parent") return toast("Switch 'View as' to Mom or Dad to verify.", "pending");
   try {
     const cfg = await api("/api/persona/config");
+    if (cfg.relay) {
+      if (!pendingInquiry) {
+        const r = await api("/api/persona/relay/start", { method: "POST", body: JSON.stringify({ actor: viewer }) });
+        pendingInquiry = r.id;
+        window.open(r.url, "_blank", "noopener,noreferrer");
+        toast(`Persona Relay <strong>Age 21+</strong> check opened in a new tab. Finish it, then press "Check verification".`, "pending");
+        $("#verifyBtn").textContent = "Check verification";
+        return;
+      }
+      const done = await api("/api/persona/relay/check", { method: "POST", body: JSON.stringify({ actor: viewer, relay_id: pendingInquiry }) });
+      pendingInquiry = null;
+      if (done.claim?.claim_result === "passed") toast(`Persona Relay: <strong>${esc(done.claim.claim_type)}</strong> passed${done.claim.sandbox ? " (sandbox)" : ""}. Pot unlocked.`);
+      else toast(`Persona Relay: ${esc(done.claim?.claim_result || done.claim?.error || "not passed")}`, "blocked");
+      return refresh();
+    }
     if (!cfg.enabled) {
       if (confirm("Persona isn't configured on this server. Unlock without verification (labeled as such in the ledger)?"))
         await api("/api/unlock", { method: "POST", body: JSON.stringify({ actor: viewer, via: "demo-no-persona" }) });

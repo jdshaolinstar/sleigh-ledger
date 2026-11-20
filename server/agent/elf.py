@@ -48,6 +48,8 @@ def block_label(decision, product) -> str:
     if "buyer_age" in failed or "recipient_age" in failed:
         kind = "Alcohol" if product and "alcohol" in product.get("tags", []) else "Age-restricted"
         return f"{kind} ({age}+) attempt blocked"
+    if "persona_age_verified" in failed:
+        return "Alcohol (21+) blocked: buyer not Persona-verified"
     for name, label in (("pot_unlocked", "Purchase while pot locked blocked"), ("budget", "Over-budget attempt blocked"),
                         ("recipient_allowed", "Unapproved recipient blocked"), ("not_duplicate", "Duplicate gift blocked"),
                         ("fact_check", "Claim didn't match the catalog (Senso)"), ("in_stock", "Out-of-stock item blocked"),
@@ -154,6 +156,13 @@ class Elf:
             ctx.household, ctx.catalog, buyer_id=b["id"], recipient=recipient, sku=sku,
             spent=ctx.ledger.spent(), claimed=ctx.ledger.claimed(), pot_unlocked=ctx.pot_unlocked,
             minor_approval_gate=gate_on, mode=ctx.policy_mode)
+        if product and product["min_age"] >= 21:
+            av = ctx.ledger.get("age_verified", {}).get(b["id"])
+            decision.checks.append(engine.Check("persona_age_verified", av == "age_over21_verified",
+                f"{b['name']} passed Persona's Age 21+ check." if av == "age_over21_verified"
+                else f"21+ items need a Persona Age 21+ verified buyer; {b['name']} isn't verified."))
+            if av != "age_over21_verified" and ctx.policy_mode == "enforce":
+                decision.allowed = False
         if check.get("overall") == "conflict" and ctx.policy_mode == "enforce":
             decision.allowed = False
             decision.checks.append(engine.Check("fact_check", False,
