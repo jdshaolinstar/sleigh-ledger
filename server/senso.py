@@ -69,9 +69,9 @@ class Senso:
     def fact_check(self, text: str, question: str, poll_s: float = 90) -> dict:
         """POST /org/evals/text (kb_accuracy). wait=true holds ~1 min; on 202 we poll /org/evals/runs/{id}.
 
-        author: "ai_assistant" only checks claims tied to *our* org, and the stores are separate
-        fictional brands, so default to "organization" (prices/policies count as ours). Override with
-        SENSO_FACTCHECK_AUTHOR once tested live.
+        Tested live (see .docs-private/RESULTS.md): claims that name a store are "about_brand: false"
+        and never scored. Phrase claims WITHOUT the store name, with author="organization", and Senso
+        scores them (it caught a wrong price and a wrong age rating as `conflict`).
         """
         author = os.environ.get("SENSO_FACTCHECK_AUTHOR", "organization")
         run = self._req("POST", "/org/evals/text", json={
