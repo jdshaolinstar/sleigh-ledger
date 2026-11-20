@@ -1,0 +1,12 @@
+.docs-private/
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+web/dist/
+data/runtime/
+*.db
+.pytest_cache/

@@ -1,0 +1,25 @@
+{
+  "id": "holly-family-demo",
+  "name": "The Holly Family",
+  "kind": "family",
+  "currency": "USD",
+  "pot": 5000,
+  "age_caps": [
+    {"max_age": 12, "cap": 100, "label": "Kids (12 and under)"},
+    {"max_age": 17, "cap": 250, "label": "Teens (13 to 17)"},
+    {"max_age": 200, "cap": null, "label": "Adults"}
+  ],
+  "rules": {
+    "minors_need_parent_approval": true,
+    "allow_budget_transfers_without_parent": false,
+    "one_gift_per_sku_per_recipient": true
+  },
+  "members": [
+    {"id": "mom", "name": "Mom", "age": 46, "role": "parent", "allocation": 1500, "friends": [], "verified": false},
+    {"id": "dad", "name": "Dad", "age": 48, "role": "parent", "allocation": 1400, "friends": [], "verified": false},
+    {"id": "jill", "name": "Jill", "age": 24, "role": "member", "allocation": 600, "friends": [{"name": "Alex", "age": 26}], "verified": false},
+    {"id": "sam", "name": "Sam", "age": 18, "role": "member", "allocation": 400, "friends": [{"name": "Maya", "age": 18}], "verified": false},
+    {"id": "bill", "name": "Bill", "age": 14, "role": "member", "allocation": 200, "friends": [], "verified": false},
+    {"id": "lucy", "name": "Lucy", "age": 10, "role": "member", "allocation": 100, "friends": [], "verified": false}
+  ]
+}

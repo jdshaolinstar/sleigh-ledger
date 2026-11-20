@@ -1,0 +1,95 @@
+{
+  "_note": "Fictional stores and products for the Sleigh Ledger demo. Not real brands. Prices in USD. min_age is the youngest age the item is suitable for (and the youngest buyer allowed).",
+  "stores": [
+    {
+      "id": "byte-barn",
+      "name": "Byte Barn",
+      "kind": "Electronics & games",
+      "returns": "Unopened items can be returned within 30 days with the receipt. Opened games cannot be returned.",
+      "shipping": "Free gift shipping on orders over $50. Delivery in 2 to 4 days.",
+      "products": [
+        {"sku": "BB-101", "name": "Pocket Pixel handheld console", "price": 129.0, "min_age": 8, "tags": ["gaming", "handheld", "tech"], "stock": 12, "desc": "A small handheld console with 20 built-in retro-style games."},
+        {"sku": "BB-102", "name": "Blood Harbor 4 (video game)", "price": 69.0, "min_age": 17, "tags": ["gaming", "mature", "action"], "stock": 30, "desc": "Rated M for Mature (17+): intense violence and strong language. Sale to buyers under 17 not allowed."},
+        {"sku": "BB-103", "name": "Kart Rally Party (video game)", "price": 49.0, "min_age": 6, "tags": ["gaming", "family", "racing"], "stock": 25, "desc": "Rated E for Everyone. Up to 4 players, couch co-op racing."},
+        {"sku": "BB-104", "name": "Glowline wireless earbuds", "price": 79.0, "min_age": 10, "tags": ["music", "tech", "audio"], "stock": 40, "desc": "Wireless earbuds with 24 hours of battery in the case."},
+        {"sku": "BB-105", "name": "Studio Pro noise-cancelling headphones", "price": 399.0, "min_age": 12, "tags": ["music", "tech", "audio", "premium"], "stock": 6, "desc": "Over-ear headphones with active noise cancelling."},
+        {"sku": "BB-106", "name": "Starter drone with camera", "price": 89.0, "min_age": 14, "tags": ["tech", "outdoors", "camera"], "stock": 0, "desc": "Beginner drone with a 720p camera. Currently out of stock."},
+        {"sku": "BB-107", "name": "Retro arcade stick", "price": 59.0, "min_age": 8, "tags": ["gaming", "retro"], "stock": 15, "desc": "USB arcade stick for PC and consoles."}
+      ]
+    },
+    {
+      "id": "toy-tower",
+      "name": "Toy Tower",
+      "kind": "Toys & games",
+      "returns": "Returns within 60 days, any condition, holiday purchases until January 31.",
+      "shipping": "Gift wrap included. Delivery in 3 to 5 days.",
+      "products": [
+        {"sku": "TT-201", "name": "Galaxy brick set (1,200 pieces)", "price": 89.0, "min_age": 9, "tags": ["building", "space", "creative"], "stock": 20, "desc": "Build a space station with moving parts."},
+        {"sku": "TT-202", "name": "Unicorn art studio kit", "price": 34.0, "min_age": 6, "tags": ["art", "creative", "crafts"], "stock": 18, "desc": "Markers, stickers and a light-up tracing pad."},
+        {"sku": "TT-203", "name": "Remote-control monster truck", "price": 55.0, "min_age": 8, "tags": ["rc", "outdoors", "cars"], "stock": 14, "desc": "All-terrain RC truck, 40 minutes of battery."},
+        {"sku": "TT-204", "name": "Mystery board game night pack", "price": 42.0, "min_age": 10, "tags": ["games", "family", "puzzles"], "stock": 22, "desc": "Three co-op mystery board games for 2 to 6 players."},
+        {"sku": "TT-205", "name": "Dino dig science kit", "price": 28.0, "min_age": 7, "tags": ["science", "dinosaurs", "stem"], "stock": 30, "desc": "Excavate 6 dinosaur skeleton replicas."},
+        {"sku": "TT-206", "name": "Robot coding kit", "price": 119.0, "min_age": 10, "tags": ["stem", "coding", "robots", "tech"], "stock": 9, "desc": "Build and program a small robot with a free app."}
+      ]
+    },
+    {
+      "id": "page-and-quill",
+      "name": "Page & Quill",
+      "kind": "Books & stationery",
+      "returns": "Returns within 30 days with the receipt.",
+      "shipping": "Free shipping on any book order. Delivery in 2 to 3 days.",
+      "products": [
+        {"sku": "PQ-301", "name": "The Lighthouse Kids (illustrated novel)", "price": 18.0, "min_age": 8, "tags": ["books", "adventure", "reading"], "stock": 50, "desc": "An illustrated adventure novel for young readers."},
+        {"sku": "PQ-302", "name": "Skate History: 70 Years of Boards", "price": 32.0, "min_age": 12, "tags": ["books", "skateboarding", "sports"], "stock": 11, "desc": "A photo book on skateboarding culture."},
+        {"sku": "PQ-303", "name": "Leather travel journal", "price": 38.0, "min_age": 12, "tags": ["stationery", "travel", "writing"], "stock": 24, "desc": "Refillable journal with a leather wrap."},
+        {"sku": "PQ-304", "name": "Home Barista: The Coffee Book", "price": 29.0, "min_age": 16, "tags": ["books", "coffee", "cooking"], "stock": 16, "desc": "Recipes and techniques for espresso at home."},
+        {"sku": "PQ-305", "name": "Fantasy box set (5 books)", "price": 59.0, "min_age": 13, "tags": ["books", "fantasy", "reading"], "stock": 13, "desc": "A five-book young adult fantasy series."},
+        {"sku": "PQ-306", "name": "Watercolor sketchbook set", "price": 26.0, "min_age": 8, "tags": ["art", "stationery", "creative"], "stock": 27, "desc": "Sketchbook with 24 travel watercolors."}
+      ]
+    },
+    {
+      "id": "thread-lab",
+      "name": "Thread Lab",
+      "kind": "Clothing",
+      "returns": "Exchanges and returns within 45 days, tags attached.",
+      "shipping": "Delivery in 3 to 6 days. Gift receipts available.",
+      "products": [
+        {"sku": "TL-401", "name": "Cozy knit holiday sweater", "price": 54.0, "min_age": 0, "tags": ["clothing", "holiday", "cozy"], "stock": 35, "desc": "Soft knit sweater in red or green, sizes XS to XXL."},
+        {"sku": "TL-402", "name": "Wool socks 3-pack", "price": 22.0, "min_age": 0, "tags": ["clothing", "socks", "cozy"], "stock": 60, "desc": "Merino wool socks."},
+        {"sku": "TL-403", "name": "Rain shell jacket", "price": 120.0, "min_age": 0, "tags": ["clothing", "outdoors", "hiking"], "stock": 10, "desc": "Lightweight waterproof jacket."},
+        {"sku": "TL-404", "name": "Skate hoodie", "price": 48.0, "min_age": 0, "tags": ["clothing", "skateboarding", "streetwear"], "stock": 19, "desc": "Heavyweight hoodie with a board graphic."},
+        {"sku": "TL-405", "name": "Silk scarf", "price": 65.0, "min_age": 0, "tags": ["clothing", "accessories", "elegant"], "stock": 12, "desc": "Printed silk scarf with a gift box."}
+      ]
+    },
+    {
+      "id": "kickflip-co",
+      "name": "Kickflip Co",
+      "kind": "Skate & outdoor sports",
+      "returns": "Returns within 30 days, unused.",
+      "shipping": "Delivery in 2 to 5 days.",
+      "products": [
+        {"sku": "KF-501", "name": "Complete skateboard deck (8.0\")", "price": 95.0, "min_age": 8, "tags": ["skateboarding", "deck", "sports"], "stock": 8, "desc": "A complete skateboard, ready to ride."},
+        {"sku": "KF-502", "name": "Grip tape and bearings kit", "price": 34.0, "min_age": 8, "tags": ["skateboarding", "parts", "sports"], "stock": 26, "desc": "Fresh grip tape plus a set of 8 speed bearings."},
+        {"sku": "KF-503", "name": "Skate helmet and pad set", "price": 64.0, "min_age": 5, "tags": ["skateboarding", "safety", "sports"], "stock": 17, "desc": "Helmet, knee pads and elbow pads."},
+        {"sku": "KF-504", "name": "Insulated hiking water bottle", "price": 30.0, "min_age": 0, "tags": ["outdoors", "hiking"], "stock": 40, "desc": "Keeps drinks cold for 24 hours."},
+        {"sku": "KF-505", "name": "Energy drink variety pack (12)", "price": 28.0, "min_age": 18, "tags": ["drinks", "caffeine", "sports"], "stock": 50, "desc": "High-caffeine energy drinks. Sale to buyers under 18 not allowed."},
+        {"sku": "KF-506", "name": "Yoga mat and blocks", "price": 45.0, "min_age": 0, "tags": ["fitness", "yoga", "wellness"], "stock": 21, "desc": "Non-slip mat with two foam blocks."}
+      ]
+    },
+    {
+      "id": "cozy-corner",
+      "name": "Cozy Corner",
+      "kind": "Home & kitchen",
+      "returns": "Returns within 30 days. Small appliances must be unused.",
+      "shipping": "Delivery in 3 to 7 days. Large items ship separately.",
+      "products": [
+        {"sku": "CC-601", "name": "Barista espresso machine", "price": 399.0, "min_age": 16, "tags": ["coffee", "kitchen", "appliance", "premium"], "stock": 5, "desc": "15-bar espresso machine with a milk frother."},
+        {"sku": "CC-602", "name": "Pour-over coffee set", "price": 48.0, "min_age": 16, "tags": ["coffee", "kitchen"], "stock": 19, "desc": "Glass dripper, kettle and filters."},
+        {"sku": "CC-603", "name": "Scented candle trio", "price": 36.0, "min_age": 0, "tags": ["home", "candles", "cozy"], "stock": 33, "desc": "Pine, cinnamon and vanilla candles."},
+        {"sku": "CC-604", "name": "Weighted throw blanket", "price": 79.0, "min_age": 8, "tags": ["home", "cozy", "wellness"], "stock": 14, "desc": "Soft 12 lb weighted blanket."},
+        {"sku": "CC-605", "name": "Indoor herb garden kit", "price": 52.0, "min_age": 10, "tags": ["home", "gardening", "cooking"], "stock": 18, "desc": "Self-watering planter with basil, mint and thyme."},
+        {"sku": "CC-606", "name": "Cast iron skillet", "price": 44.0, "min_age": 16, "tags": ["kitchen", "cooking"], "stock": 22, "desc": "Pre-seasoned 10-inch skillet."}
+      ]
+    }
+  ]
+}
