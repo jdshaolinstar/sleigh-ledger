@@ -1,4 +1,5 @@
 import { Town } from "./town.js";
+import { sfx, music } from "./sfx.js";
 
 const $ = (s) => document.querySelector(s);
 const money = (n) => (n == null ? "—" : `$${Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
@@ -325,7 +326,7 @@ function handle(e, animate) {
   trackThought(e);
   if (e.kind === "persona_claim") identity.push({ ...d, actor: e.actor });
   if (e.kind === "feedback") { feedbacks.push({ ...d, actor: e.actor }); think(e.actor, `Feedback remembered: ${d.recipient} ${d.rating === "up" ? "loved" : "didn't love"} ${d.item}`, d.backend === "cognee" ? "cognee" : "local"); }
-  if (e.kind === "walk") { town.reveal(d.store); if (animate) { town.walkTo(e.actor, d.store); town.say(e.actor, d.why === "buying" ? `heading into ${d.store_name}` : `browsing ${d.store_name}`); } }
+  if (e.kind === "walk") { if (animate && town.shops[d.store] && !town.shops[d.store].revealed) sfx.reveal(); town.reveal(d.store); if (animate) { if (d.why === "buying") sfx.step(); town.walkTo(e.actor, d.store); town.say(e.actor, d.why === "buying" ? `heading into ${d.store_name}` : `browsing ${d.store_name}`); } }
   if (!animate) { if (e.kind === "blocked") blocked.push({ ...d, actor: e.actor }); if (e.kind === "purchase") town.giveGift(e.actor); return; }
   if (e.kind === "recall") town.say(e.actor, `reading ${d.person}'s list`);
   if (e.kind === "fact_check") town.say(e.actor, `fact-check: ${d.overall}`);
@@ -335,6 +336,7 @@ function handle(e, animate) {
     const pending = d.status === "pending_approval";
     toast(`<strong>${esc(name(e.actor))}'s elf</strong> ${pending ? "wants to buy something at" : "just bought something at"} <strong>${esc(d.store_name)}</strong>${pending ? ` · ${chip("statsig")} waits for a parent` : ` · ${chip("senso")} verified · ${chip(S?.ledger_backend === "singlestore" ? "singlestore" : "ledger")} saved`}`, pending ? "pending" : "");
     town.say(e.actor, pending ? "waiting for a parent" : "🎁 bought a gift!");
+    (pending ? sfx.pending : sfx.buy)();
     town.giveGift(e.actor);
     town.goHome(e.actor);
   }
@@ -343,9 +345,11 @@ function handle(e, animate) {
     const sb = stoppedBy(d.failed, d.label)[0] || ["policy", "Household rules"];
     toast(`<strong>${esc(name(e.actor))}'s elf</strong> was stopped${d.store_name ? ` at <strong>${esc(d.store_name)}</strong>` : ""} · ${chip(sb[0])} ${esc(sb[1].split(": ")[1] || sb[1])}`, "blocked");
     town.say(e.actor, "stopped by a rule");
+    sfx.blocked();
     town.goHome(e.actor);
   }
   if (e.kind === "wish_saved") town.say(e.actor, "added to the list ✍");
+  if (e.kind === "pot_unlocked") sfx.unlock();
   if (e.kind === "pot_unlocked") toast(`<strong>${esc(name(e.actor))}</strong> verified with Persona. The pot is unlocked.`);
   if (e.kind === "run_end") Object.keys(town.elves).forEach((id) => { town.goHome(id); setTimeout(() => town.say(id, ""), 4000); });
 }
@@ -363,6 +367,7 @@ async function pollEvents() {
 
 // ---------- click an elf ----------
 town.onElfClick = (memberId, x, y) => {
+  sfx.boop();
   const pop = $("#elfPop");
   const gifts = S.purchases.filter((p) => p.buyer === memberId && ["completed", "pending_approval"].includes(p.status));
   const ts = (thoughts[memberId] || []).slice(-5);
@@ -400,6 +405,16 @@ $("#snapRestore").addEventListener("click", async () => {
   if (!confirm("Replace the current ledger with the saved snapshot?")) return;
   await api("/api/snapshot/restore", { method: "POST" }); location.reload();
 });
+
+document.addEventListener("click", (ev) => { if (ev.target.closest("button, summary, .tabs button")) sfx.tick(); });
+const muteBtn = $("#muteBtn");
+const paintMute = () => (muteBtn.textContent = sfx.isMuted() ? "🔇" : "🔊");
+paintMute();
+muteBtn.addEventListener("click", () => { sfx.toggle(); paintMute(); });
+const musicBtn = $("#musicBtn");
+const paintMusic = () => { musicBtn.textContent = music.isOn() ? "🎵" : "🎵̸"; musicBtn.style.opacity = music.isOn() ? 1 : 0.45; };
+paintMusic();
+musicBtn.addEventListener("click", () => { music.toggle(); paintMusic(); });
 
 // ---------- controls ----------
 $("#viewer").addEventListener("change", (e) => { viewer = e.target.value; refresh(); });

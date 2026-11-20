@@ -89,4 +89,4 @@ data/              fictional catalog + household config
 
 ## Credits
 
-Built with Senso, Firedrill, SingleStore, Persona, Cognee, Statsig, Amplitude, OpenAI and Three.js. Fonts: Fraunces and Inter (Google Fonts).
+Built with Senso, Firedrill, SingleStore, Persona, Cognee, Statsig, Amplitude, OpenAI and Three.js. Fonts: Fraunces and Inter (Google Fonts). Sound effects and the music-box "Jingle Bells" (Pierpont, 1857, public domain) are synthesized in the browser; no audio files.
