@@ -14,6 +14,8 @@ import threading
 _statsig = None
 _lock = threading.Lock()
 DEFAULTS = {"teen_needs_parent_approval": True}
+# The Statsig console gate can have any name; map our logical gate to it (env STATSIG_TEEN_GATE).
+GATE_NAMES = {"teen_needs_parent_approval": os.environ.get("STATSIG_TEEN_GATE", "h-shop-gate")}
 
 
 def _client():
@@ -43,7 +45,7 @@ def check_gate(name: str, member: dict) -> bool:
     if c is None:
         return DEFAULTS.get(name, False)
     try:
-        g = c.get_feature_gate(_user(member), name)
+        g = c.get_feature_gate(_user(member), GATE_NAMES.get(name, name))
         if "Unrecognized" in str(getattr(g.details, "reason", "")):
             return DEFAULTS.get(name, False)  # gate not created in Statsig yet: keep the safe default
         return bool(g.value)

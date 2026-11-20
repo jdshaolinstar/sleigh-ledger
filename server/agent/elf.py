@@ -182,7 +182,7 @@ class Elf:
         status = "pending_approval" if decision.needs_approval else "completed"
         evidence = {"claim": claim, "reason": reason, "fact_check": check, "policy": decision.to_dict(),
                     "memory": self.recalled.get(rec["id"]),
-                    "gate": {"teen_needs_parent_approval": gate_on, "source": flags.source()},
+                    "gate": {"teen_needs_parent_approval": gate_on, "source": flags.source(), "statsig_gate": flags.GATE_NAMES["teen_needs_parent_approval"]},
                     "senso_results": [e["data"]["results"] for e in ctx.ledger.events()[-40:]
                                       if e["kind"] == "search" and e["actor"] == b["id"]][-1:] or []}
         p = ctx.ledger.add_purchase(run_id=self.run_id, buyer=b["id"], recipient_id=rec["id"], recipient_name=rec["name"],

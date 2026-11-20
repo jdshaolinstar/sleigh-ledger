@@ -203,7 +203,7 @@ function renderLedger() {
       steps.push(`<li>${chip("senso")}<span>Fact-checked the elf's claim "${esc(ev.claim)}" → <strong class="${fc.overall === "conflict" ? "bad" : fc.overall === "verified" ? "ok" : ""}">${esc(fc.overall)}</strong>${verdicts ? ` (${esc(verdicts)})` : ""}</span></li>`);
     }
     if (ev.policy) steps.push(`<li>${chip("policy")}<span>${ev.policy.checks.map((c) => `<span class="${c.ok ? "ok" : "bad"}">${c.ok ? "✓" : "✗"}</span> ${esc(c.name.replace("_", " "))}`).join(" · ")}</span></li>`);
-    if (ev.gate) steps.push(`<li>${chip(ev.gate.source === "statsig" ? "statsig" : "local-default")}<span>Gate teen_needs_parent_approval = ${ev.gate.teen_needs_parent_approval}</span></li>`);
+    if (ev.gate) steps.push(`<li>${chip(ev.gate.source === "statsig" ? "statsig" : "local-default")}<span>Statsig gate ${esc(ev.gate.statsig_gate || "teen_needs_parent_approval")} (teen needs parent approval) = ${ev.gate.teen_needs_parent_approval}</span></li>`);
     steps.push(`<li>${chip(S.ledger_backend === "singlestore" ? "singlestore" : "ledger")}<span>${p.status === "completed" ? `Simulated checkout · receipt ${esc(p.receipt)}` : p.status === "pending_approval" ? "Held for parent approval" : esc(p.status)}</span></li>`);
     return `<div class="card receipt"><div class="head"><div><div class="item">${esc(p.item)} <span class="meta">(${esc(p.sku)})</span></div>
       <div class="meta">${esc(name(p.buyer))}'s elf → ${esc(p.recipient_name)} · ${esc(p.store)} · ${money(p.price)}</div></div>
