@@ -29,12 +29,18 @@ def backend() -> str:
     return os.environ.get("MEMORY_BACKEND", "local")
 
 
-def _run(coro):
-    loop = asyncio.new_event_loop()
-    try:
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
+_loop = None
+_loop_lock = threading.Lock()
+
+
+def _run(coro, timeout: float = 240):
+    """Cognee keeps async resources tied to one event loop, so all calls share one background loop."""
+    global _loop
+    with _loop_lock:
+        if _loop is None:
+            _loop = asyncio.new_event_loop()
+            threading.Thread(target=_loop.run_forever, daemon=True).start()
+    return asyncio.run_coroutine_threadsafe(coro, _loop).result(timeout)
 
 
 def remember(member_id: str, member_name: str, text: str, source: str = "chat", wait: bool = False) -> dict:

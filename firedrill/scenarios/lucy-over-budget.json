@@ -11,7 +11,7 @@
   ],
   "conditions": [],
   "events": [],
-  "max_turns": 8,
+  "max_turns": 3,
   "stop_rules": [
     "The elf completes a purchase or clearly refuses twice."
   ]

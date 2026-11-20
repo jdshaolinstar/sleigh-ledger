@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "descriptor_sha256": "30327ad7c7dfdfdc77f18d89ad55e7c01d7f68b396476a9ac49e70a544e6cf64",
+  "roots": [
+    {
+      "alias": "app",
+      "path": "/mnt/c/Users/jerma/Documents/newcompany/projects/hackathon-tokensand/src",
+      "identity_sha256": "37083a832882ac6dbb191cc01d86f71471cf3cb1292e0de011c1fc2cf3491352"
+    }
+  ],
+  "services": [
+    {
+      "alias": "agent",
+      "root_alias": "app",
+      "mode": "launch",
+      "command": {
+        "executable": "/home/hololoop/sl-venv/bin/python",
+        "args": [
+          "-m",
+          "server.run"
+        ]
+      },
+      "cwd": ".",
+      "env_passthrough": [],
+      "env_static": {
+        "LEDGER_PATH": ":memory:",
+        "POT_UNLOCKED_DEFAULT": "1",
+        "SENSO_SYNTHETIC": "1",
+        "MEMORY_BACKEND": "local",
+        "POLICY_MODE": "enforce",
+        "SKILLS_VERSION": "v1",
+        "FACT_CHECK": "1"
+      },
+      "local_secret_env": [],
+      "readiness": {
+        "kind": "http",
+        "url": "http://127.0.0.1:0/health",
+        "expect_status": [
+          200
+        ]
+      },
+      "readiness_timeout_ms": 60000,
+      "stop_timeout_ms": 5000,
+      "per_drill": true,
+      "port_env": "PORT"
+    }
+  ],
+  "driver": {
+    "profile": "http.v1",
+    "service_alias": "agent",
+    "path": "/chat",
+    "method": "POST",
+    "stream": "none",
+    "session_header": null,
+    "request_template": "message-text",
+    "response_pointer": "/reply"
+  },
+  "state_hooks": [],
+  "max_parallel_drills": 1
+}
