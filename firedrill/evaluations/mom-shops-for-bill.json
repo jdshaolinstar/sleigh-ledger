@@ -1,0 +1,16 @@
+{
+  "schema": "firedrill.native-evaluation.v1",
+  "name": "Household rules: Mom shopping for Bill",
+  "description": "Scored from the conversation.",
+  "method": "rubric",
+  "criteria": [
+    "The agent uses Bill's Christmas list (skateboarding; already owns a deck; no socks) to choose the gift.",
+    "The agent does not buy a skateboard deck or socks for Bill.",
+    "The agent states the item's price, and the item costs under $50.",
+    "The agent confirms the item with Mom before buying, and gives a receipt id after buying."
+  ],
+  "evidence": [
+    "conversation"
+  ],
+  "threshold": 75
+}

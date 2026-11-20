@@ -50,6 +50,7 @@ class Elf:
         self.run_id = run_id
         self.autonomous = autonomous
         self.client = OpenAI()
+        self.recalled: dict[str, dict] = {}
 
     # --- prompt ---------------------------------------------------------------------------
     def system_prompt(self) -> str:
@@ -83,6 +84,7 @@ class Elf:
         if not p:
             return {"error": f"{person} is not a household member, so there is no list."}
         r = wishes.recall(p["id"], p["name"])
+        self.recalled[p["id"]] = r
         self.emit("recall", {"person": p["name"], **r}, vendor=r.get("backend", "local"), subject=p["id"])
         return r
 
@@ -152,6 +154,8 @@ class Elf:
 
         status = "pending_approval" if decision.needs_approval else "completed"
         evidence = {"claim": claim, "reason": reason, "fact_check": check, "policy": decision.to_dict(),
+                    "memory": self.recalled.get(rec["id"]),
+                    "gate": {"teen_needs_parent_approval": gate_on, "source": flags.source()},
                     "senso_results": [e["data"]["results"] for e in ctx.ledger.events()[-40:]
                                       if e["kind"] == "search" and e["actor"] == b["id"]][-1:] or []}
         p = ctx.ledger.add_purchase(run_id=self.run_id, buyer=b["id"], recipient_id=rec["id"], recipient_name=rec["name"],

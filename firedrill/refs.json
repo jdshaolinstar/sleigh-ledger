@@ -1,0 +1,87 @@
+{
+  "persona:bill-mature-game": {
+    "origin": "native_library",
+    "kind": "persona",
+    "id": "8e2aed73-dc84-4dbd-a9c0-15df1e7aa600",
+    "revision": 1,
+    "digest": "b7d54aee383bb1aef3b761220e190f41d995b69a7654e683b42b6b51753a9ad9"
+  },
+  "persona:lucy-over-budget": {
+    "origin": "native_library",
+    "kind": "persona",
+    "id": "3c375c47-2c05-4452-9a29-eac69fba063b",
+    "revision": 1,
+    "digest": "c788825f9af38adb3611d6ebf33f696decce33a0c45efed40185aa5a4cf77d68"
+  },
+  "persona:mom-shops-for-bill": {
+    "origin": "native_library",
+    "kind": "persona",
+    "id": "472151be-1211-42d6-b8ec-40fe773e471a",
+    "revision": 1,
+    "digest": "0d6742621131ca0f6617d66fb737991b0af04606db98774505c01b7267e19f6d"
+  },
+  "persona:sam-off-list": {
+    "origin": "native_library",
+    "kind": "persona",
+    "id": "e22060c4-f6e4-480e-8d85-296c10d4c3e6",
+    "revision": 1,
+    "digest": "3d0045db96819a7236d678bb6ac0cf8993037a2924e1ac8bcf8dd05ebd5ec254"
+  },
+  "evaluation:bill-mature-game": {
+    "origin": "native_library",
+    "kind": "evaluation",
+    "id": "1c072d85-eaf1-4a24-ba4c-4bf5889521a4",
+    "revision": 1,
+    "digest": "edac04c5c7475809b5583876299cb18e42873653999ccfe09843f5c1d8302e2c"
+  },
+  "evaluation:lucy-over-budget": {
+    "origin": "native_library",
+    "kind": "evaluation",
+    "id": "90f7df2e-d959-4eec-9254-fb89065c02d4",
+    "revision": 1,
+    "digest": "37ec164af5d0527eddd73a7ac7436a00b320fecf3ea26284310e02d8ac44218a"
+  },
+  "evaluation:mom-shops-for-bill": {
+    "origin": "native_library",
+    "kind": "evaluation",
+    "id": "3d7d8d61-6c2b-4547-b164-8bd4792dda65",
+    "revision": 1,
+    "digest": "6c649a0c471056da65f4b5e391e9dbc93a731daa5d4f6923dd9305d7d77ac32b"
+  },
+  "evaluation:sam-off-list": {
+    "origin": "native_library",
+    "kind": "evaluation",
+    "id": "29d444e5-e15d-4679-a19a-165d167ac294",
+    "revision": 1,
+    "digest": "42dd556ca3c89ea05adf69c644fef9923ee8b621aebef06113afa190a68f3a18"
+  },
+  "scenario:bill-mature-game": {
+    "origin": "native_library",
+    "kind": "scenario",
+    "id": "4246560b-c848-4289-89fa-f10422020e8e",
+    "revision": 1,
+    "digest": "cee09ea43d91a4d44bb81b8448dbae26db52583bebaa714a5a36a5fb578eaba3"
+  },
+  "scenario:lucy-over-budget": {
+    "origin": "native_library",
+    "kind": "scenario",
+    "id": "5aeff0f9-e1cc-471f-a051-7e57e29a6399",
+    "revision": 1,
+    "digest": "e0a058fd8b7d886a28836dddd9e80c583264eff2d32359d3d7bbee114448f2ca"
+  },
+  "scenario:mom-shops-for-bill": {
+    "origin": "native_library",
+    "kind": "scenario",
+    "id": "7c73d7c8-60bf-4363-abed-a24d5287057b",
+    "revision": 1,
+    "digest": "6d7a989093c1d48d3ae0cded84e917d1ba98a13c6d724e1c3c977620d6c7ae34"
+  },
+  "scenario:sam-off-list": {
+    "origin": "native_library",
+    "kind": "scenario",
+    "id": "a79775ef-0733-4d41-9942-0170cadb653b",
+    "revision": 1,
+    "digest": "ad3c8350fab624e53220d042597b9506f0602cd7014e4d10eef02e536d225715"
+  },
+  "world": "96618294-8a4e-4557-a270-070ea486a232"
+}

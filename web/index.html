@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sleigh Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/web/style.css" />
+  <script type="importmap">
+    { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo">❄</span>
+      <div>
+        <h1>Sleigh Ledger</h1>
+        <p class="tag">Elves with receipts, but no spoilers.</p>
+      </div>
+    </div>
+    <div class="controls">
+      <span id="modeBadge" class="badge"></span>
+      <label class="viewas">View as
+        <select id="viewer"></select>
+      </label>
+      <button id="runBtn" class="primary">Run the shopping day</button>
+      <button id="resetBtn" class="ghost" title="Reset the demo">Reset</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="town-wrap">
+      <div id="town"></div>
+      <div id="toasts"></div>
+      <div class="town-legend">Top-down town · every store an elf visits lights up · checkout is simulated</div>
+    </section>
+
+    <aside class="panel">
+      <nav class="tabs">
+        <button data-tab="pot" class="active">Family Pot</button>
+        <button data-tab="lists">Lists</button>
+        <button data-tab="ledger">Ledger</button>
+        <button data-tab="drills">Drills</button>
+      </nav>
+
+      <div class="tab" id="tab-pot">
+        <div id="lock" class="card lock"></div>
+        <div class="pot-head">
+          <div><span class="label">Family pot</span><strong id="potTotal">$0</strong></div>
+          <div><span class="label">Allocated</span><strong id="potAlloc">$0</strong></div>
+          <div><span class="label">Spent</span><strong id="potSpent">$0</strong></div>
+        </div>
+        <div id="sliders"></div>
+        <p class="hint">Caps by age: 12 and under $100 · teens $250 · adults up to the pot. Only a verified parent can move sliders. Every change is a ledger entry.</p>
+        <div id="approvals"></div>
+      </div>
+
+      <div class="tab hidden" id="tab-lists">
+        <p class="hint">Everyone's Christmas list is shared with the family, built from chats with their own elf. Gifts already bought show as <em>claimed</em> to other givers, never to the list's owner. Lists marked "seeded" were written for the demo.</p>
+        <div id="lists"></div>
+        <div class="card chat">
+          <div class="chat-head">Talk to <select id="chatAs"></select>'s elf</div>
+          <div id="chatLog"></div>
+          <form id="chatForm"><input id="chatInput" placeholder="e.g. I'm really into dinosaurs lately" autocomplete="off" /><button>Send</button></form>
+        </div>
+      </div>
+
+      <div class="tab hidden" id="tab-ledger">
+        <p class="hint">Every receipt shows the steps behind it and which service did each step. What you see depends on <strong>View as</strong>.</p>
+        <div id="ledger"></div>
+      </div>
+
+      <div class="tab hidden" id="tab-drills">
+        <div id="drills"></div>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="/web/app.js"></script>
+</body>
+</html>

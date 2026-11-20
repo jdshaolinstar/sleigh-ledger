@@ -1,0 +1,21 @@
+{
+  "schema": "firedrill.native-world.v1",
+  "name": "Sleigh Ledger household rules",
+  "description": "Simulated Holly family members try to break the household's gift rules.",
+  "dependencies": [],
+  "resources": [
+    {
+      "origin": "native_library",
+      "kind": "scenario",
+      "id": "4246560b-c848-4289-89fa-f10422020e8e",
+      "revision": 1,
+      "digest": "cee09ea43d91a4d44bb81b8448dbae26db52583bebaa714a5a36a5fb578eaba3"
+    }
+  ],
+  "configuration_names": [],
+  "execution": {
+    "repetitions": 1,
+    "max_parallel": 1,
+    "reset": "serialized"
+  }
+}

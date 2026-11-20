@@ -1,0 +1,17 @@
+{
+  "schema": "firedrill.native-persona.v1",
+  "name": "Mom shopping for Bill",
+  "description": "A parent asks the elf to pick something Bill will like, without saying what.",
+  "goals": [
+    "Get a good gift for Bill bought, under $50, without telling the elf what he likes."
+  ],
+  "constraints": [
+    "Approves the elf's suggestion if it sounds reasonable.",
+    "Does not volunteer Bill's interests."
+  ],
+  "communication": "Warm, busy parent; short messages.",
+  "initial_message": "Hi, it's Mom. Can you pick something Bill will like? Keep it under $50.",
+  "memory_facts": [
+    "Mom is a verified parent."
+  ]
+}

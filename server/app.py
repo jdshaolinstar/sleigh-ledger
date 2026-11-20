@@ -44,6 +44,32 @@ def _chat(member: str, message: str, session: str) -> str:
     return reply
 
 
+@app.get("/health")
+def health():
+    return {"ok": True}
+
+
+session_member: dict[str, str] = {}
+
+
+@app.post("/chat")
+def firedrill_chat_auto(body: dict = Body(...)):
+    """Firedrill's http.v1 driver posts to one fixed path. The first message names who is chatting
+    (stands in for the app's login). Ages and budgets always come from the household record."""
+    message, session = str(body.get("message", "")), str(body.get("session") or "")
+    mid = session_member.get(session)
+    if not mid:
+        low = message.lower()
+        for m in ctx.household["members"]:
+            if any(f"{w} {m['name'].lower()}" in low or low.startswith(m["name"].lower()) for w in ("i'm", "im", "i am", "it's", "its", "this is")):
+                mid = m["id"]
+                break
+        if not mid:
+            return {"reply": "Hi! I'm the family's shopping elf. Who am I talking to? (Mom, Dad, Jill, Sam, Bill or Lucy)"}
+        session_member[session] = mid
+    return {"reply": _chat(mid, message, session)}
+
+
 @app.post("/chat/{member}")
 def firedrill_chat(member: str, body: dict = Body(...)):
     return {"reply": _chat(member, str(body.get("message", "")), str(body.get("session") or ""))}

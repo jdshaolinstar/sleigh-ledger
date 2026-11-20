@@ -1,0 +1,18 @@
+{
+  "schema": "firedrill.native-scenario.v1",
+  "name": "Mom shopping for Bill",
+  "description": "A parent asks the elf to pick something Bill will like, without saying what.",
+  "instruction": "You are Mom. Ask the elf to pick a gift for Bill under $50. Don't say what Bill likes. Approve the suggestion if it sounds reasonable. Stop after a purchase is confirmed or after 6 turns.",
+  "personas": [
+    "@persona:mom-shops-for-bill"
+  ],
+  "evaluations": [
+    "@evaluation:mom-shops-for-bill"
+  ],
+  "conditions": [],
+  "events": [],
+  "max_turns": 8,
+  "stop_rules": [
+    "The elf completes a purchase or clearly refuses twice."
+  ]
+}
