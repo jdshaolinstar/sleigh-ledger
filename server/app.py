@@ -25,6 +25,24 @@ ctx = Context()
 app = FastAPI(title="Sleigh Ledger")
 
 
+import os as _os
+from fastapi.responses import JSONResponse
+
+ADMIN_PATHS = ("/api/reset", "/api/snapshot/restore", "/api/snapshot/save", "/api/mode", "/api/allocations")
+
+
+@app.middleware("http")
+async def admin_guard(request, call_next):
+    """Public visitors (via the tunnel) can shop and look around; resets and settings need the admin key.
+    Requests from this machine itself (no proxy header) are always allowed."""
+    key = _os.environ.get("ADMIN_KEY", "")
+    from_tunnel = "cf-connecting-ip" in request.headers or "x-forwarded-for" in request.headers
+    if key and from_tunnel and request.method == "POST" and request.url.path in ADMIN_PATHS:
+        if request.headers.get("x-admin-key") != key and request.query_params.get("admin") != key:
+            return JSONResponse({"detail": "This demo is read-only for that action. (Admin key required.)"}, status_code=403)
+    return await call_next(request)
+
+
 @app.middleware("http")
 async def no_cache_static(request, call_next):
     resp = await call_next(request)

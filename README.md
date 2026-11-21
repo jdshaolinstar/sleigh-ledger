@@ -11,6 +11,9 @@ Built in one day at the Tokens& Personal Agents Hackathon (SF, Nov 20, 2026) for
 
 > All stores and products are fictional, and every checkout is **simulated**. No real purchases are made.
 
+**Live demo (backup link, runs from the builder's laptop during judging):** https://perspective-provides-learned-keep.trycloudflare.com
+Anyone can explore, chat, run playbooks and the shopping day; reset and settings are admin-only.
+
 ## What it does
 
 - **Top-down 3D town.** Each family member's elf walks to the shops. A shop's sign flips to its name when an
